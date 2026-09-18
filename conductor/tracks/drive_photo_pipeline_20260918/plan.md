@@ -17,7 +17,7 @@
 - [x] Task: Implement photo operations (`src/services/drive/photos.ts`) [b5e0e49]
   - [x] Write fake-fetch tests for upload, fetchBlob, and markReplaced (rename)
   - [x] Implement operations
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: b5e0e49]
 
 ## Phase 3: Cover Caching
 - [ ] Task: Implement IndexedDB cache (`src/services/drive/coverCache.ts`)
