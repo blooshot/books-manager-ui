@@ -49,7 +49,7 @@ A task is complete when **all** of these hold:
 1.  Every bullet of the spec is implemented, or listed as an explicit deviation (with reason) in `plan.md` and `docs/STATUS.md`.
 2.  `npm run verify` passes **on the final code**: lint with no new warnings, all tests, typecheck, build. (`tsc` fails on unused
     imports/variables; a green test run alone is not enough.)
-3.  For anything a user sees or navigates, it has been **looked at in a real browser** (or the Not verified list says it has not); component tests cannot show a missing redirect or a broken layout. Tests are real ([testing.md](./code_styleguides/testing.md)): they call the code under test, use the strict fakes, cover
+3.  For anything a user sees or navigates, it has been **looked at in a real browser** (run `npm run ui:check`, and add a flow for anything new; or the Not verified list says it has not); component tests cannot show a missing redirect or a broken layout. Tests are real ([testing.md](./code_styleguides/testing.md)): they call the code under test, use the strict fakes, cover
     failure paths, and a control check was done for any new guard.
 4.  Code follows `code_styleguides/`; no `any`, no raw `localStorage`, no new dependency without updating `tech-stack.md`.
 5.  New network calls are covered by the allow-list guard in `src/test/no-delete.test.ts`; the append-only rules are intact.

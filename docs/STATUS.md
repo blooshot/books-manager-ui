@@ -4,7 +4,7 @@ Read this after `AGENTS.md` at the start of every session; update it at the end
 of every session or milestone (protocol in `AGENTS.md`; how to keep it consistent: `conductor/workflow.md`).
 Newest entries at the top of "Log". Keep it short and factual.
 
-**Last updated:** 2026-09-19 · **By:** Claude Code (login flow, after step 7)
+**Last updated:** 2026-09-19 · **By:** Claude Code (first real Sheet, Chrome check)
 
 ## Where we are
 
@@ -25,7 +25,7 @@ Build order (from `AGENTS.md`):
 | 8 | Protected range on `Books` (verify owner behaviour, ADR-0004) | **Next**, owner-driven (brief below) — needs the real Sheet |
 | 9 | Deploy + CI/CD | Not started (brief below) |
 
-`npm run verify` passes: **470 tests in 34 files**, build OK, 1 known lint warning (generated `button.tsx`).
+`npm run verify` passes: **482 tests in 34 files**; `npm run ui:check` passes **7 flows**, build OK, 1 known lint warning (generated `button.tsx`).
 
 ## What exists
 
@@ -131,6 +131,13 @@ selectors (`selectOpenLoanByBookId`, `selectLentOutByBorrower`). Fusion tokens i
   on `signOut.fulfilled`; unsent changes stay in IndexedDB and are sent automatically at the next sign-in (`startSync`).
 - `SignInGate` preloads Google's script on mount so the sign-in click can open the popup at once. Tests: `features/auth/AuthFlow.test.tsx` (19; 7 control checks red -> green), including a journey: save a change offline -> sign out anyway -> back online -> sign in -> it is sent automatically.
 
+**Sheet setup errors and the Chrome check** (after the first real request returned 400):
+- `sheets/client.ts` maps Google's 400 `Unable to parse range: <tab>` to `SheetTabMissingError` (names the tab, says the app needs tabs named exactly `Books` and `Borrowers`, points to README > Sheet setup) and 400 `not supported for this document` (an uploaded Excel file) to a message saying
+  to use File > Save as Google Sheets. Neither is retryable or queueable. Other 400s pass Google's own words through. `FakeSheets` now answers 400 for an unknown tab (it used to throw) and can simulate a non-native file (`notNativeSheet`).
+- README > **Sheet setup**: the exact tab names, the two header rows to paste into A1, and the date (`yyyy-mm-dd`) and time (`HH:mm`) column formats.
+- `scripts/ui-check/` (`npm run ui:check`, dev dependency `puppeteer-core`): real Chrome + Google stubbed at the network layer (sign-in script, userinfo, Sheets read/append/update, 400 for an unknown tab). 7 flows: deep-link login redirect, sign-out and next sign-in at home, add a book (a real write), offline change ->
+  unsent-changes warning -> sent at next sign-in, missing tabs, wrong header, phone vs desktop layout. Control-checked (4 breakages, all caught). Not part of `verify`.
+
 **Guards/conventions** — `src/test/no-delete.test.ts`: no delete/clear/`trashed:true`/trash/`FormData` upload; Sheets endpoint
 allow-list; Drive method allow-list and PATCH-only-rename. `src/test/conventions.test.ts`: no raw storage outside `lib/storage.ts`,
 no `any`, default exports only for App/main/slices.
@@ -149,9 +156,9 @@ no `any`, default exports only for App/main/slices.
 - **The UI has never been seen in a browser:** layout at phone/desktop widths, dark mode, the Fusion look, focus rings, hover lift, `prefers-reduced-motion`, keyboard use,
   and the sidebar/bottom-nav switch at the 768px breakpoint. jsdom has no CSS or layout, so tests cover behaviour and accessibility roles only; `useMediaQuery` is driven by a stand-in.
 - **Covers on screen:** the list/detail *display* covers through a stub loader in tests. `createBrowserCoverLoader` (real object URLs, real IndexedDB, canvas thumbnails) has never run in a browser.
-- **Verified in real Chrome (headless, v153) with Google stubbed:** using a scratch harness (puppeteer-core + the system Chrome, not in the repo) that stubs Google's sign-in script and the Sheets/Drive responses at the network layer, I walked: signed-out deep link -> `#/login` -> sign in -> back to the
+- **Verified in real Chrome (headless, v153) with Google stubbed** by `npm run ui:check` (formerly a scratch harness), which stubs Google's sign-in script and the Sheets/Drive responses at the network layer, I walked: signed-out deep link -> `#/login` -> sign in -> back to the
   deep link; sign out -> `#/login` -> sign in -> `#/`; an unreachable Sheet -> "1 pending" and the unsent-changes warning; and looked at screenshots at 390px and 1280px (layout, Fusion styling, sidebar vs bottom nav, dialog as bottom sheet). **This is not real Google**: real sign-in,
-  scopes, consent, real Sheets/Drive, and dark mode were not exercised, and the stub does not implement Sheets *writes* (so a retried write there ended as a 404 "failed" entry, which is a harness limit).
+  scopes, consent, real Sheets/Drive, and dark mode were not exercised, and the stub implements only the parts of the Sheets API the app uses.
 - **The outbox has only run against `MemoryOutbox` and `fake-indexeddb`**, never real IndexedDB in Safari/Chrome/Firefox (quota, private windows, the connection closing between calls, storage eviction), and never against real network loss or a real 401. The "lost response"
   retries are simulated by a fake that applies a write and then throws.
 - **Idempotency depends on how the Sheet formats things.** `Added at` is forced text so an add retry always matches. Borrow and return retries match on the date and time as *displayed*, so the `Borrowed date` / `Returned date` columns must be formatted `yyyy-mm-dd` and the time
@@ -224,6 +231,9 @@ Decisions needed first: static host (Cloudflare Pages / Netlify / GitHub Pages) 
 
 ## Log
 
+- 2026-09-19 — Claude Code: **first real Sheet: 400 explained; Chrome check committed.** A `batchGet?ranges=Books` returned 400 from the owner's Sheet: Google answers `Unable to parse range: Books` when the spreadsheet has no tab of that name (a new Sheet's first tab is `Sheet1`). The client now says what to do, the fake
+  answers like Google for unknown tabs, and README has the exact setup. Added `npm run ui:check` (7 flows). **Verified:** `npm run verify` on the final code: 482 tests / 34 files, build OK, 1 known lint warning; `npm run ui:check`: 7/7; 4 control checks on the script red -> green; the new tests were written red first.
+  **Not verified:** the owner's real Sheet (the response body was not seen; the diagnosis is the standard cause and the friendly message will confirm it on the next run), real Google sign-in. **Follow-ups:** owner fixes the Sheet per README; step 8; step 9.
 - 2026-09-19 — Claude Code: **login flow fixed after looking at the running UI.** Opening the app in real Chrome (Google stubbed) showed: no redirect after login (no login route), a deliberate sign-out returned you to the old page on the next sign-in, sign-out could hang while offline (it awaited the token revoke),
   the previous library stayed in memory after sign-out, and Google's script was only loaded after the click (popup-blocking risk). Added `/login` + `RequireSession`, instant sign-out that clears in-memory data, a confirm when changes are unsent, and script preloading. **Verified:** `npm run verify` on the final code:
   470 tests / 34 files, build OK, 1 known lint warning; 7 control checks red -> green; the flow re-walked in real Chrome. **Not verified:** real Google sign-in; dark mode; anything on a real phone. **Observations, not fixed:** the header **Sync** icon and the list page **Refresh** button look like the same control

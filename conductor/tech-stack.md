@@ -18,4 +18,5 @@ Please refer to `AGENTS.md` and `docs/adr/` before considering any changes to th
 - **Lint / typecheck / build:** `oxlint`, `tsc -b`, `vite build`. The gate for every task is `npm run verify`.
 - **Coding rules:** `conductor/code_styleguides/` (`typescript.md`, `testing.md`, `google-apis.md`). Past mistakes: `lessons-learned.md`.
 - Adding a runtime dependency requires updating this file first (and an ADR if it changes a decision).
+- **UI check:** `puppeteer-core` (dev only; no browser download, uses the system Chrome) drives `npm run ui:check` (`scripts/ui-check/`). It stubs Google at the network layer and is not part of `verify`.
 
