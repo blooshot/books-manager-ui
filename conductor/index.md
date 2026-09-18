@@ -16,3 +16,8 @@
 -   [Agent Skills](../.agents/skills/)
 -   [Agent Rules](../.agents/rules/)
 -   [Agent Hooks](../.agents/hooks/)
+
+## Tracks
+
+- [Tracks Registry](./tracks.md)
+- [Tracks Directory](./tracks/)
