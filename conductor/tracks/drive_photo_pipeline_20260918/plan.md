@@ -14,9 +14,9 @@
   - [x] Extend `src/test/no-delete.test.ts` to block Drive delete API calls
   - [x] Write fake-fetch tests for find-or-create logic (missing, existing, duplicate)
   - [x] Implement `Book Covers` folder resolution and `localStorage` caching
-- [ ] Task: Implement photo operations (`src/services/drive/photos.ts`)
-  - [ ] Write fake-fetch tests for upload, fetchBlob, and markReplaced (rename)
-  - [ ] Implement operations
+- [x] Task: Implement photo operations (`src/services/drive/photos.ts`) [b5e0e49]
+  - [x] Write fake-fetch tests for upload, fetchBlob, and markReplaced (rename)
+  - [x] Implement operations
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Cover Caching
