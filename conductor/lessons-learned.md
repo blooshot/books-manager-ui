@@ -35,3 +35,10 @@ Add a row whenever a review finds something the process should have caught. Keep
 |---|---|
 | A `requestAnimationFrame` focus timer after a failed submit could fire mid-typing and move focus into another field; found because a test failed only after another test | Never move focus on a timer; investigate order-dependent failures instead of re-running (testing.md rule 9) |
 
+## Step 6c (Claude Code), for the record
+
+| What went wrong | Rule now |
+|---|---|
+| The Borrow dialog was rendered only for available books; the optimistic update flipped the status mid-save and unmounted it (state and error lost, blank dialog on failure). Found by a failing test | Keep dialogs/forms mounted independent of the data they change; remember what a dialog operates on when it opens (typescript.md, React) |
+| A placeholder assertion (`expect(true).toBe(true)`) was left in a test while iterating | Never leave a tautology behind; grep for it before finishing (testing.md rule 1) |
+

@@ -5,6 +5,7 @@ import { MemoryRouter, useLocation } from 'react-router'
 import { vi } from 'vitest'
 import App, { AppRoutes } from '@/App'
 import { CoverProvider } from '@/features/covers/CoverProvider'
+import { setClockForTests } from '@/lib/clock'
 import type { CoverLoader } from '@/services/drive/covers'
 import { makeStore, type AppStore } from '@/store'
 import { signIn } from '@/store/sessionSlice'
@@ -50,6 +51,7 @@ export function renderApp(options: RenderAppOptions = {}) {
     ((input, init) => (new URL(String(input)).hostname === 'sheets.googleapis.com' ? sheets.fetch(input, init) : drive.fetch(input, init)))
 
   setViewport(options.viewport ?? 'phone')
+  setClockForTests(NOW)
   const store: AppStore = makeStore({ sheetId: 'sheet-1', fetchImpl: routed, now: () => NOW })
   if (!options.signedOut) {
     store.dispatch(

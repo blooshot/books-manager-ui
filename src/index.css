@@ -89,3 +89,23 @@
     }
   }
 }
+
+/*
+ * Dialog, sheet and accordion motion. Durations come from the Fusion tokens, which the
+ * prefers-reduced-motion block in tokens.css sets to 0ms, so reduced motion needs no extra rules here.
+ * (Tailwind v4 positions with the individual `translate` property, so these animate `scale`/`translate`
+ * without clobbering the utilities.)
+ */
+@keyframes bm-fade-in { from { opacity: 0; } }
+@keyframes bm-dialog-in { from { opacity: 0; scale: 0.96; } }
+@keyframes bm-sheet-in { from { translate: 0 100%; } }
+@keyframes bm-accordion-down { from { height: 0; } to { height: var(--radix-accordion-content-height); } }
+@keyframes bm-accordion-up { from { height: var(--radix-accordion-content-height); } to { height: 0; } }
+
+.bm-overlay { animation: bm-fade-in var(--duration-base) var(--ease); }
+.bm-dialog { animation: bm-dialog-in var(--duration-base) var(--ease); }
+.bm-sheet { animation: bm-sheet-in var(--duration-slow) var(--ease); }
+.bm-accordion-content { overflow: hidden; }
+.bm-accordion-content[data-state='open'] { animation: bm-accordion-down var(--duration-base) var(--ease); }
+.bm-accordion-content[data-state='closed'] { animation: bm-accordion-up var(--duration-base) var(--ease); }
+

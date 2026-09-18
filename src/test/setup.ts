@@ -1,12 +1,14 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
+import { setClockForTests } from '@/lib/clock'
 
 // Vitest runs with globals off, so Testing Library's automatic cleanup is not registered
 afterEach(() => {
   cleanup()
   localStorage.clear()
   sessionStorage.clear()
+  setClockForTests(null)
 })
 
 // jsdom has no matchMedia; default to a phone-sized viewport (see src/test/viewport.ts to change it)

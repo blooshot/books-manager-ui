@@ -1,4 +1,4 @@
-import { BookOpen, PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react'
+import { BookOpen, PanelLeftClose, PanelLeftOpen, Users, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -19,8 +19,10 @@ interface NavItem {
   end?: boolean
 }
 
-/** Add screens here as they are built (Lent out arrives with step 6c). */
-const NAV_ITEMS: NavItem[] = [{ to: '/', label: 'Books', icon: BookOpen, end: true }]
+const NAV_ITEMS: NavItem[] = [
+  { to: '/', label: 'Books', icon: BookOpen, end: true },
+  { to: '/lent-out', label: 'Lent out', icon: Users },
+]
 
 const SIDEBAR_KEY = 'bm.sidebarCollapsed'
 

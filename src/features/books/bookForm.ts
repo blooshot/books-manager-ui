@@ -1,3 +1,4 @@
+import { isRealIsoDate } from '@/lib/datetime'
 import type { BookPatch, NewBookInput } from '@/services/sheets/api'
 import type { Book } from '@/types/library'
 
@@ -14,17 +15,6 @@ export const EMPTY_BOOK_FORM: BookFormValues = { title: '', author: '', purchase
 
 export type BookFormErrors = Partial<Record<keyof BookFormValues, string>>
 
-const DATE = /^(\d{4})-(\d{2})-(\d{2})$/
-
-/** `yyyy-mm-dd` that is a real calendar date (rejects 2026-02-30). */
-function isRealDate(text: string): boolean {
-  const match = DATE.exec(text)
-  if (!match) return false
-  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])]
-  const date = new Date(Date.UTC(year, month - 1, day))
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
-}
-
 /** "1,299.50" -> 1299.5; empty -> undefined; anything else (letters, negatives, 3 decimals) -> 'invalid'. */
 export function parseAmount(text: string): number | undefined | 'invalid' {
   const cleaned = text.trim().replace(/,/g, '')
@@ -37,7 +27,7 @@ export function validateBookForm(values: BookFormValues): BookFormErrors {
   if (values.title.trim() === '') errors.title = 'Title is required.'
   if (values.author.trim() === '') errors.author = 'Author is required.'
   const date = values.purchaseDate.trim()
-  if (date !== '' && !isRealDate(date)) errors.purchaseDate = 'Enter a valid date as yyyy-mm-dd.'
+  if (date !== '' && !isRealIsoDate(date)) errors.purchaseDate = 'Enter a valid date as yyyy-mm-dd.'
   if (parseAmount(values.pricePaid) === 'invalid') errors.pricePaid = 'Enter an amount such as 1299.50.'
   if (parseAmount(values.marketPrice) === 'invalid') errors.marketPrice = 'Enter an amount such as 1299.50.'
   return errors

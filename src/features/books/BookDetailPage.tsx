@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { BorrowHistory } from '@/features/books/BorrowHistory'
 import { StatusBadge } from '@/features/books/StatusBadge'
+import { BookActions } from '@/features/loans/BookActions'
 import { CoverImage } from '@/features/covers/CoverImage'
 import { formatMoney } from '@/lib/format'
 import { useAppSelector } from '@/store/hooks'
@@ -76,6 +77,7 @@ export function BookDetailPage() {
               )}
             </div>
           </div>
+          <BookActions book={book} openLoan={openLoan} />
           <dl>
             <Field label="Book ID" mono>{book.id}</Field>
             <Field label="Purchase date" mono>{book.purchaseDate ?? '—'}</Field>

@@ -77,3 +77,5 @@ Precedence: `AGENTS.md` and `docs/adr/` > this file > everything else. Read
 - Style with Tailwind utilities mapped to Fusion tokens (`bg-primary`, `bg-success`, `bg-attention`,
   `bg-destructive`); never hardcode colors. Details: [product-guidelines.md](../product-guidelines.md).
 - Form controls 16px on mobile; honour `prefers-reduced-motion`.
+- Optimistic updates change props while a request is in flight. Do not render a dialog or form conditionally on the data it edits (it unmounts mid-save and loses its state and error);
+  keep it mounted and remember what it operates on when it opens.

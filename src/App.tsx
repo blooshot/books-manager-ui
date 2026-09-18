@@ -6,6 +6,7 @@ import { AddBookPage, EditBookPage } from '@/features/books/BookFormPage'
 import { BookListPage } from '@/features/books/BookListPage'
 import { CoverProvider } from '@/features/covers/CoverProvider'
 import { AppLayout } from '@/features/layout/AppLayout'
+import { LentOutPage } from '@/features/loans/LentOutPage'
 import { useAppSelector } from '@/store/hooks'
 
 function NotFoundPage() {
@@ -26,6 +27,7 @@ export function AppRoutes() {
         <Route path="books/new" element={<AddBookPage />} />
         <Route path="books/:id" element={<BookDetailPage />} />
         <Route path="books/:id/edit" element={<EditBookPage />} />
+        <Route path="lent-out" element={<LentOutPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
