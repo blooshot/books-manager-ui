@@ -4,7 +4,7 @@ Read this after `AGENTS.md` at the start of every session; update it at the end
 of every session or milestone (protocol in `AGENTS.md`; how to keep it consistent: `conductor/workflow.md`).
 Newest entries at the top of "Log". Keep it short and factual.
 
-**Last updated:** 2026-09-19 · **By:** Claude Code (step 6a)
+**Last updated:** 2026-09-19 · **By:** Claude Code (step 6b)
 
 ## Where we are
 
@@ -18,14 +18,14 @@ Build order (from `AGENTS.md`):
 | 4 | Sheets read/write service layer + no-delete guard | **Done** (Claude) — fake Sheet only |
 | 5 | Drive photo service layer (folder, upload, fetch, rename, cache, links, resize) | **Done after review fixes** (built by Conductor, corrected by Claude) — fake Drive only |
 | 5b | Wire photos into the store (upload-before-row, replace = rename, cover loading + cache) | **Done** (Claude) — fake Sheets + fake Drive only |
-| 6a | Screens: shell + routing, book list (search/filter), book detail + borrow history, covers, notices | **Done** (Claude) — fake Sheets/Drive, jsdom only; awaiting review |
-| 6b | Screens: add/edit book form with photo capture, form drafts | **Next** (brief below) |
-| 6c | Screens: borrow / return, Lent out | Not started |
+| 6a | Screens: shell + routing, book list (search/filter), book detail + borrow history, covers, notices | **Done** (Claude, committed `1c54d18`) — fake Sheets/Drive, jsdom only |
+| 6b | Screens: add/edit book form with photo capture, form drafts | **Done** (Claude) — fake Sheets/Drive, jsdom only; awaiting review |
+| 6c | Screens: borrow / return, Lent out | **Next** (brief below) |
 | 7 | Outbox + Sync button | Not started |
 | 8 | Protected range on `Books` (verify owner behaviour, ADR-0004) | Not started, needs the real Sheet |
 | 9 | Deploy + CI/CD | Not started |
 
-`npm run verify` passes: **245 tests in 23 files**, build OK, 1 known lint warning (generated `button.tsx`).
+`npm run verify` passes: **311 tests in 26 files**, build OK, 1 known lint warning (generated `button.tsx`).
 
 ## What exists
 
@@ -85,6 +85,19 @@ selectors (`selectOpenLoanByBookId`, `selectLentOutByBorrower`). Fusion tokens i
 - Tests: `src/test/render.tsx` (`renderApp`: real store + router against `FakeSheets`/`FakeDrive`, stub cover loader), `fixtures.ts`, `viewport.ts`. Control checks done (status filter,
   history order, reconnect banner, cover expiry, URL state); one gap found and closed (Available filter had no page-level test).
 
+**Step 6b** — add / edit book (`src/features/books/`):
+- Routes `/books/new` and `/books/:id/edit` (`AddBookPage`, `EditBookPage` in `BookFormPage.tsx`); "Add book" button on the list, "Edit" button on the detail page.
+- `bookForm.ts` (pure, unit-tested): `validateBookForm` (title/author required, real `yyyy-mm-dd` date, amounts like `1,299.50`), `toNewBookInput`, `toBookPatch` (only changed fields, `null` clears an
+  emptied optional field), `valuesFromBook`, `findDuplicate` (case/space-insensitive title + author, ignores the book being edited).
+- Form: labelled fields with `aria-invalid` / `aria-describedby`, errors shown after the first submit and live afterwards, focus moved to the first invalid field (effect, not a timer), Book ID read-only,
+  soft duplicate warning with a link (never blocks), "Saving…" locks the form, save errors shown by `error.name` with the form kept filled; an expired session says to reconnect and keeps the changes.
+  Edit sends nothing when nothing changed; Cancel discards the draft.
+- `PhotoField`: `<input type="file" accept="image/*" capture="environment">` -> real `createCoverVariants` -> preview (object URL made in the event handler, revoked on replace/clear/unmount);
+  decode failure shows an alert and the book can still be saved; "Clear selection" only drops a not-yet-saved choice (there is no way to delete a saved cover).
+- `useFormDraft`: fields mirrored to `sessionStorage` via `lib/storage` (`readSession`/`writeSession`/`removeSession`), kept only while different from the saved values, validated on read (corrupt/foreign
+  drafts ignored), cleared by a successful save or Cancel, "Restored your unsaved changes" + Discard. Never contains the photo or a token.
+- Tests: `BookFormPage.test.tsx` (29) with `src/test/imaging.ts`, which stubs the browser image APIs *under* the real resize code; control checks on five behaviours all red -> green.
+
 **Guards/conventions** — `src/test/no-delete.test.ts`: no delete/clear/`trashed:true`/trash/`FormData` upload; Sheets endpoint
 allow-list; Drive method allow-list and PATCH-only-rename. `src/test/conventions.test.ts`: no raw storage outside `lib/storage.ts`,
 no `any`, default exports only for App/main/slices.
@@ -103,7 +116,9 @@ no `any`, default exports only for App/main/slices.
 - **The UI has never been seen in a browser:** layout at phone/desktop widths, dark mode, the Fusion look, focus rings, hover lift, `prefers-reduced-motion`, keyboard use,
   and the sidebar/bottom-nav switch at the 768px breakpoint. jsdom has no CSS or layout, so tests cover behaviour and accessibility roles only; `useMediaQuery` is driven by a stand-in.
 - **Covers on screen:** the list/detail *display* covers through a stub loader in tests. `createBrowserCoverLoader` (real object URLs, real IndexedDB, canvas thumbnails) has never run in a browser.
-- **No photo capture UI yet** (6b), so covers can only appear for books whose Photo cell already holds a Drive link.
+- **Photo capture has never been tried with a real camera or real image:** `createCoverVariants` (canvas, `createImageBitmap`, EXIF rotation, JPEG encoding) is tested only with stand-ins under jsdom; the
+  `capture` attribute's camera behaviour on iOS/Android, the file chooser on desktop, and preview rendering are browser-only.
+- **The date field is a native `<input type="date">`:** its picker and format differ per browser; jsdom sanitizes invalid values, so the "invalid date" message is covered only by the pure `validateBookForm` tests.
 - Real-run checklist for the Sheets side: `npm run dev`, sign in, expect "N books · M currently lent out". Likely first failures:
   `http://localhost:5173` missing from authorised origins; tab names not exactly `Books` / `Borrowers`; a header missing (the error names
   it); APIs not enabled. Date columns must be formatted `yyyy-mm-dd` or dates read back in the Sheet's locale format.
@@ -123,6 +138,10 @@ no `any`, default exports only for App/main/slices.
 - **Testing Library queries in this UI** are ambiguous by design (a "Books" heading, nav link and back link; "Borrowed" as badge, filter button, and history text). Scope with `within(...)`, list names
   (`getByRole('list', { name: 'Books' })`), or `{ selector: '[data-slot="badge"]' }`.
 - **Lint:** `react/only-export-components` is off for `src/test/**` and `*.test.tsx` (`.oxlintrc.json` overrides); production files must still keep components and non-components apart.
+- **Never move focus with a timer.** `requestAnimationFrame` after a failed submit fired mid-typing and pulled focus into the next invalid field (tests typing quickly saw "D" in Title and "une" in Author).
+  Focus from an effect keyed to the submit instead. A test that passes alone but fails after another test is a real signal (shared state or timing), not flakiness to re-run.
+- **`<input type="date">` under jsdom** drops values that aren't valid dates, so tests set it with `fireEvent.change(..., '2025-12-31')` and cover bad dates in the pure validator.
+- **Testing the image path:** `src/test/imaging.ts` stubs `createImageBitmap` and canvas `getContext`/`toBlob`; the "JPEG" it produces is 2 bytes holding the canvas width so full (1000) and thumb (240) are distinguishable.
 - **Photo flow:** the cover file is named after the Book ID, which is only known at write time, so the upload happens *inside* the serialized write
   (after the ID is chosen, before the row). This refines the earlier "upload first, then append" wording. If the row write fails after the upload,
   the uploaded file's ID is not surfaced (Redux keeps only `name`/`message`/`code`): the outbox (step 7) must upload and remember the file ID
@@ -137,28 +156,28 @@ no `any`, default exports only for App/main/slices.
 - Owner's local files (not committed on purpose): `THE-LAST-SYNC.txt`, and a `.gitignore` line for it whose path
   (`books-management/THE-LAST-SYNC.txt`) is wrong relative to the repo root — it should read `THE-LAST-SYNC.txt`.
 
-## Next: step 6b brief — add / edit book (with photo capture)
+## Next: step 6c brief — borrow / return / Lent out
 
-Read `conductor/code_styleguides/` and `conductor/product-guidelines.md` first. Same flow and gates as 6a. Reuse `renderApp`, the fakes, and `addBook` / `editBook` (they already handle photos).
+Read `conductor/code_styleguides/` and `conductor/product-guidelines.md` first. Same flow and gates. Reuse `renderApp`, the fakes, `borrowBook` / `returnBook` (optimistic + rollback, already tested), and
+`selectLentOutByBorrower`. Adding shadcn components (`dialog`, `sheet`, `accordion`, `command`) means **re-checking `package.json` and imports after each `npx shadcn add`**.
 
-- **Routes/entry points:** an "Add book" button on the list (top of the page; primary action `bg-primary`), an "Edit" button on the detail page. Form as a page (`/books/new`, `/books/:id/edit`) or a
-  Dialog on desktop / bottom Sheet on phone; decide in the plan (a page is simpler and deep-linkable). Add shadcn `dialog`/`sheet` only if used; **re-check `package.json` and imports after each `npx shadcn add`**.
-- **Form:** Title and Author required; optional purchase date (`yyyy-mm-dd`), price paid, market price (numbers in `VITE_CURRENCY`); Book ID shown read-only on edit ("assigned when saved" on add).
-  Inline validation messages tied to fields (`aria-describedby`/`aria-invalid`); controls 16px on phones; submit disabled while saving; server errors by `error.name` (`ValidationError`, `SessionExpiredError`, ...).
-- **Photo:** `<input type="file" accept="image/*" capture="environment">` -> `createCoverVariants` (already written; browser-only) -> thunk `photo`; preview via object URL (revoke it); Replace/Remove-selection
-  (removing a selection only clears the *pending* choice; there is no way to delete a saved cover).
-- **Soft duplicate warning:** on add, warn (not block) when a book with the same title and author exists.
-- **Drafts:** mirror form fields to `sessionStorage` through `lib/storage` (add a session-storage variant there; **no photo, no token**), restore on reload, clear on successful save.
-- **After save:** navigate to the book's detail page; the store already holds it (`addBook` puts it in; `editBook` is optimistic).
-- **Tests (Testing Library + `FakeSheets`/`FakeDrive`, no mocks of our own modules):** required-field validation; add without and with a photo (assert Sheet row, Drive file, request order); edit text only makes no Drive calls;
-  edit with a new photo renames the old file; failure paths (500, 401 -> reconnect banner) roll back and keep the form filled; draft restore/clear; duplicate warning; keyboard/label basics; no delete control.
-  Browser-only parts (camera capture, canvas resize) go under **Not verified**.
-- **Acceptance:** all the above green; `npm run verify` on the final code; STATUS.md updated per `conductor/workflow.md` with a Completion Report.
+- **Borrow (from the detail page, only when the book is available):** name (free text with autocomplete from past borrower names in the store), date and time defaulting to now (editable), place. Dialog on desktop,
+  bottom Sheet on phone (`useIsDesktop`). Validation: name required. `borrowBook` rejects an already-borrowed book; show `AlreadyBorrowedError` clearly (the list may be stale: offer Refresh).
+- **Return (only when borrowed):** one tap; date/time default to now (editable in the same dialog/sheet if the user wants to backdate). `returnBook` with `returnedDate`/`returnedTime`.
+- **Lent out screen (`/lent-out`, add to `NAV_ITEMS`):** grouped by borrower (Accordion), each book linking to its detail page, showing "since" dates; empty state; counts. Uses `selectLentOutByBorrower`.
+- **Errors:** by `error.name` / `error.code` (see Gotchas); expired session keeps the dialog open with the values and shows the reconnect banner.
+- **Tests (Testing Library + fakes):** borrow from available book updates Sheet row and badges (list, detail, Lent out); borrowing a borrowed book is not offered and a stale attempt is rejected with a clear message; return closes the
+  loan (Returned = Yes, date, time) and history shows it; backdated return; validation; autocomplete suggestions from past borrowers; failure/rollback leaves the UI unchanged; Lent out grouping/order/empty state; phone vs desktop
+  presentation; keyboard/label basics; no delete control. Real-browser look goes under **Not verified**.
+- **Acceptance:** all green; `npm run verify` on the final code; STATUS.md updated per `conductor/workflow.md` with a Completion Report.
 
-6c (borrow / return / Lent out) and step 7 (outbox + Sync) follow; see `AGENTS.md` (Screens, Data flow) and ADR-0006.
+Then step 7 (outbox + Sync); see ADR-0006 and the photo-flow gotcha above.
 
 ## Log
 
+- 2026-09-19 — Claude Code: **step 6b done (awaiting owner review).** Add/edit form pages with validation, duplicate warning, photo capture through the real resize code, sessionStorage drafts, error and saving states, Add/Edit entry
+  points. **Verified:** `npm run verify` on the final code: 311 tests / 26 files, build OK, 1 known lint warning; five control checks red -> green. **Found and fixed:** a `requestAnimationFrame` focus timer that could pull focus into the next
+  field mid-typing (surfaced as a test that only failed after another test). **Not verified:** real browser, real camera/image, real Google. **Deviations:** form is a page, not a dialog (deep-linkable, simpler). **Follow-ups:** 6c.
 - 2026-09-19 — Claude Code: **step 6a done (awaiting owner review).** Routing (`react-router`, hash), shell, book list with URL-backed search/filter, book detail with borrow history, cover display with
   placeholder, notices, shared token getter. **Verified:** `npm run verify` on the final code: 245 tests / 23 files, build OK, 1 known lint warning; control checks on five behaviours (one test gap found and closed).
   **Not verified:** any real browser (layout, dark mode, breakpoints, keyboard), real Google, real cover loading. **Deviations:** none from the brief; sorting is fixed (title) with no sort UI. **Follow-ups:** 6b, 6c.

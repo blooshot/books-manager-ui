@@ -1,4 +1,4 @@
-import { RefreshCw, Search } from 'lucide-react'
+import { Plus, RefreshCw, Search } from 'lucide-react'
 import { useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -111,10 +111,18 @@ export function BookListPage() {
     <section aria-labelledby="books-heading" className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h1 id="books-heading" className="font-display text-xl font-bold">Books</h1>
-        <Button variant="outline" size="sm" onClick={() => void dispatch(loadAll())} disabled={library.status === 'loading'}>
-          <RefreshCw className={cn(library.status === 'loading' && 'animate-spin motion-reduce:animate-none')} aria-hidden />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => void dispatch(loadAll())} disabled={library.status === 'loading'}>
+            <RefreshCw className={cn(library.status === 'loading' && 'animate-spin motion-reduce:animate-none')} aria-hidden />
+            Refresh
+          </Button>
+          <Button asChild size="sm">
+            <Link to="/books/new">
+              <Plus aria-hidden />
+              Add book
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

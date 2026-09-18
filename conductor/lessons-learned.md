@@ -28,3 +28,10 @@ Add a row whenever a review finds something the process should have caught. Keep
 | Redux drops `status` from serialized errors | Errors carry `code`; branch on `name`/`code` |
 | Blank input showed briefly before rejection | Validate before any optimistic change |
 | shadcn CLI installed an unrelated `cn` package | Re-read `package.json` and imports after any generator |
+
+## Step 6b (Claude Code), for the record
+
+| What went wrong | Rule now |
+|---|---|
+| A `requestAnimationFrame` focus timer after a failed submit could fire mid-typing and move focus into another field; found because a test failed only after another test | Never move focus on a timer; investigate order-dependent failures instead of re-running (testing.md rule 9) |
+

@@ -1,6 +1,7 @@
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Pencil } from 'lucide-react'
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router'
+import { Button } from '@/components/ui/button'
 import { BorrowHistory } from '@/features/books/BorrowHistory'
 import { StatusBadge } from '@/features/books/StatusBadge'
 import { CoverImage } from '@/features/covers/CoverImage'
@@ -56,7 +57,15 @@ export function BookDetailPage() {
         <CoverImage book={book} variant="full" className="w-40 shrink-0 self-start sm:w-48" />
         <div className="min-w-0 flex-1 space-y-3">
           <div className="space-y-2">
-            <h1 id="book-title" className="font-display text-2xl font-bold">{book.title}</h1>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <h1 id="book-title" className="font-display text-2xl font-bold">{book.title}</h1>
+              <Button asChild size="sm" variant="outline">
+                <Link to={`/books/${book.id}/edit`}>
+                  <Pencil aria-hidden />
+                  Edit
+                </Link>
+              </Button>
+            </div>
             <p className="text-muted-foreground">{book.author}</p>
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge borrowed={Boolean(openLoan)} />

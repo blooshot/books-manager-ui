@@ -56,6 +56,11 @@ that cannot happen again. Runner: Vitest + jsdom. Gate: `npm run verify`.
   acceptable in tests to build minimal stand-ins.
 - Keep tests readable: name them as sentences describing behaviour.
 
-## 9. Definition of "tested"
+## 9. Order-dependent failures are real bugs
+- A test that passes alone but fails after another test (or only sometimes) means shared state or a timing race. Find it; never re-run until green.
+  (Step 6b: a `requestAnimationFrame` focus timer fired mid-typing and moved focus into another field. The fix was a real code change.)
+- Do not move focus, or do anything else user-visible, on a timer; do it from an effect tied to the state change.
+
+## 10. Definition of "tested"
 A behaviour is tested when a test fails if that behaviour breaks. A behaviour that only ever ran against a fake is
 **tested but not verified against the real service**; say exactly that in the plan notes and STATUS.md.

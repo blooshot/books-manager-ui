@@ -1,0 +1,90 @@
+import type { BookPatch, NewBookInput } from '@/services/sheets/api'
+import type { Book } from '@/types/library'
+
+/** The add/edit form's fields, all as the text the user typed. */
+export interface BookFormValues {
+  title: string
+  author: string
+  purchaseDate: string
+  pricePaid: string
+  marketPrice: string
+}
+
+export const EMPTY_BOOK_FORM: BookFormValues = { title: '', author: '', purchaseDate: '', pricePaid: '', marketPrice: '' }
+
+export type BookFormErrors = Partial<Record<keyof BookFormValues, string>>
+
+const DATE = /^(\d{4})-(\d{2})-(\d{2})$/
+
+/** `yyyy-mm-dd` that is a real calendar date (rejects 2026-02-30). */
+function isRealDate(text: string): boolean {
+  const match = DATE.exec(text)
+  if (!match) return false
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])]
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+}
+
+/** "1,299.50" -> 1299.5; empty -> undefined; anything else (letters, negatives, 3 decimals) -> 'invalid'. */
+export function parseAmount(text: string): number | undefined | 'invalid' {
+  const cleaned = text.trim().replace(/,/g, '')
+  if (cleaned === '') return undefined
+  return /^\d+(\.\d{1,2})?$/.test(cleaned) ? Number(cleaned) : 'invalid'
+}
+
+export function validateBookForm(values: BookFormValues): BookFormErrors {
+  const errors: BookFormErrors = {}
+  if (values.title.trim() === '') errors.title = 'Title is required.'
+  if (values.author.trim() === '') errors.author = 'Author is required.'
+  const date = values.purchaseDate.trim()
+  if (date !== '' && !isRealDate(date)) errors.purchaseDate = 'Enter a valid date as yyyy-mm-dd.'
+  if (parseAmount(values.pricePaid) === 'invalid') errors.pricePaid = 'Enter an amount such as 1299.50.'
+  if (parseAmount(values.marketPrice) === 'invalid') errors.marketPrice = 'Enter an amount such as 1299.50.'
+  return errors
+}
+
+const amount = (text: string): number | undefined => {
+  const parsed = parseAmount(text)
+  return parsed === 'invalid' ? undefined : parsed
+}
+
+/** Values for a valid form, ready for `addBook`. */
+export function toNewBookInput(values: BookFormValues): NewBookInput {
+  return {
+    title: values.title.trim(),
+    author: values.author.trim(),
+    purchaseDate: values.purchaseDate.trim() || undefined,
+    pricePaid: amount(values.pricePaid),
+    marketPrice: amount(values.marketPrice),
+  }
+}
+
+export function valuesFromBook(book: Book): BookFormValues {
+  return {
+    title: book.title,
+    author: book.author,
+    purchaseDate: book.purchaseDate ?? '',
+    pricePaid: book.pricePaid === undefined ? '' : String(book.pricePaid),
+    marketPrice: book.marketPrice === undefined ? '' : String(book.marketPrice),
+  }
+}
+
+/** Only the fields that differ from the saved book; an emptied optional field becomes `null` (clear the cell). */
+export function toBookPatch(values: BookFormValues, book: Book): BookPatch {
+  const patch: BookPatch = {}
+  const next = toNewBookInput(values)
+  if (next.title !== book.title) patch.title = next.title
+  if (next.author !== book.author) patch.author = next.author
+  if (next.purchaseDate !== book.purchaseDate) patch.purchaseDate = next.purchaseDate ?? null
+  if (next.pricePaid !== book.pricePaid) patch.pricePaid = next.pricePaid ?? null
+  if (next.marketPrice !== book.marketPrice) patch.marketPrice = next.marketPrice ?? null
+  return patch
+}
+
+const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
+
+/** An existing book with the same title and author (ignoring case and spacing), if any. */
+export function findDuplicate(books: Book[], title: string, author: string, excludeId?: string): Book | undefined {
+  if (title.trim() === '' || author.trim() === '') return undefined
+  return books.find((book) => book.id !== excludeId && same(book.title, title) && same(book.author, author))
+}
