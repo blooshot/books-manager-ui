@@ -15,8 +15,10 @@ const booksSlice = createSlice({
     },
     bookAdded: booksAdapter.addOne,
     bookUpdated: booksAdapter.updateOne,
+    /** Insert or replace a whole book (used to reconcile optimistic updates and roll them back). */
+    bookSet: booksAdapter.setOne,
   },
 })
 
-export const { booksLoaded, bookAdded, bookUpdated } = booksSlice.actions
+export const { booksLoaded, bookAdded, bookUpdated, bookSet } = booksSlice.actions
 export default booksSlice.reducer

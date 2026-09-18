@@ -42,3 +42,16 @@ call volume is not a real constraint.
 - The generic SWR rule in `.agents/ui/rules/react-data-fetching.md` does not
   apply here.
 - If offline-first use becomes a goal, this should be revisited (see ADR-0002).
+
+## Clarifications (from implementing step 4)
+- **Adding a book is not optimistic.** The Book ID is assigned from a fresh read at write time, so the book enters the
+  store once the Sheet confirms it. Edit, borrow and return *are* optimistic and roll back on failure. Blank required
+  fields are rejected before any optimistic change.
+- **Sheet writes run one at a time** (an in-process queue). Each write derives something from a fresh read (next ID, row),
+  so overlapping writes such as a double-clicked Add could otherwise duplicate an ID.
+- **Row edits write only the changed cells** (`values:batchUpdate`), never a whole row, so columns the app doesn't know
+  about are never overwritten. Endpoints are limited to `values:batchGet`, `:append`, `values:batchUpdate`
+  (enforced by an allow-list test).
+- **Errors:** Redux serializes thunk errors to `{name, message, code}`. `SheetsError.code` is the HTTP status as a string or
+  `'NETWORK'`; the outbox (step 7) retries only `SessionExpiredError` and `NETWORK`.
+

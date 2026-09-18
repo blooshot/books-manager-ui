@@ -23,6 +23,32 @@ function sourceFiles(dir: string): string[] {
   })
 }
 
+describe('guard patterns', () => {
+  it.each([
+    ['deleteDimension', 'requests: [{ deleteDimension: {} }]'],
+    ['Sheets values:clear', "`${root}/values/Books!A1:H9:clear`"],
+    ['Sheets values:clear', "`${root}/values:batchClear`"],
+    ['HTTP DELETE', "fetch(url, { method: 'DELETE' })"],
+    ['Drive emptyTrash', 'drive.files.emptyTrash()'],
+  ])('would catch %s', (label, sample) => {
+    const pattern = FORBIDDEN.find(([name]) => name.includes(label.split(' ').pop()!))?.[1]
+    expect(pattern, `no pattern for ${label}`).toBeDefined()
+    expect(pattern!.test(sample)).toBe(true)
+  })
+})
+
+describe('Sheets endpoint allow-list (ADR-0004)', () => {
+  const servicesDir = path.resolve(import.meta.dirname, '..', 'services')
+  const source = sourceFiles(servicesDir).map((f) => readFileSync(f, 'utf8')).join('\n')
+
+  it('only calls values:batchGet, values:batchUpdate and :append', () => {
+    const used = new Set([...source.matchAll(/values:(\w+)/g)].map((m) => m[1]))
+    expect([...used].filter((op) => !['batchGet', 'batchUpdate'].includes(op))).toEqual([])
+    expect(used.has('batchGet') && used.has('batchUpdate')).toBe(true)
+    expect(source).toContain(':append')
+  })
+})
+
 describe('append-only guard (ADR-0004)', () => {
   const files = sourceFiles(path.resolve(import.meta.dirname, '..'))
 

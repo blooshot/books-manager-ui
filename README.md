@@ -28,5 +28,8 @@ to *In production*.
 
 ## Status
 
-Scaffold only: sign-in gate (GIS token client), Redux store (session, books,
-borrowers), Fusion theme with light/dark toggle. Next: Sheets service layer.
+Sign-in gate (GIS token client), Redux store, Fusion theme with light/dark
+toggle, and the Sheets service layer (read, add/edit books, borrow/return).
+After sign-in the app shows book and lent-out counts from your Sheet. The Sheet
+needs tabs named `Books` and `Borrowers` with the header columns listed in
+`AGENTS.md`, and date columns formatted `yyyy-mm-dd`. Progress: `docs/STATUS.md`.

@@ -14,8 +14,12 @@ const borrowersSlice = createSlice({
     },
     loanAdded: loansAdapter.addOne,
     loanUpdated: loansAdapter.updateOne,
+    /** Insert or replace a whole loan (reconcile / roll back optimistic changes). */
+    loanSet: loansAdapter.setOne,
+    /** Drops a local, not-yet-confirmed loan row from the store. Never touches the Sheet. */
+    loanDiscarded: loansAdapter.removeOne,
   },
 })
 
-export const { loansLoaded, loanAdded, loanUpdated } = borrowersSlice.actions
+export const { loansLoaded, loanAdded, loanUpdated, loanSet, loanDiscarded } = borrowersSlice.actions
 export default borrowersSlice.reducer
