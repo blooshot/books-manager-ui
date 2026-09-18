@@ -1,2 +1,1 @@
 ---
-- [x] **Track: Drive photo upload/read/cache service layer** *Link: [./tracks/drive_photo_pipeline_20260918/index.md](./tracks/drive_photo_pipeline_20260918/index.md)*
