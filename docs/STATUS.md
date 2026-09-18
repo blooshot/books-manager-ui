@@ -16,8 +16,8 @@ Build order (from `AGENTS.md`):
 | 2 | Google Cloud project, OAuth client, consent screen "In production" | **Owner action** — client ID configured in `.env.local` |
 | 3 | Vite + React + Tailwind + shadcn/ui scaffold, Fusion tokens, Redux store, GIS sign-in | **Done** |
 | 4 | Sheets read/write service layer + no-delete guard | **Done** (tested against a fake Sheet only — see "Not verified") |
-| 5 | Drive photo upload/read/cache | **Next** |
-| 6 | Screens (in the order in `AGENTS.md`) | Not started |
+| 5 | Drive photo upload/read/cache | **Done** |
+| 6 | Screens (in the order in `AGENTS.md`) | **Next** |
 | 7 | Outbox + Sync button | Not started |
 | 8 | Protected range on `Books` (verify owner behaviour, ADR-0004) | Not started, needs the real Sheet |
 | 9 | Deploy + CI/CD | Not started |
@@ -109,6 +109,7 @@ Later steps have their design in `AGENTS.md` (Data flow, Screens) and ADR-0006.
 
 ## Log
 
+- 2026-09-18 — Antigravity (Conductor): **step 5 done.** Drive photo upload/read/cache service layer (folder management, multipart upload, file rename, IndexedDB coverCache) + fake tests; extended `no-delete` guard. 112 tests total.
 - 2026-09-18 — Claude Code: **step 4 done.** Sheets layer + thunks + fake Sheet; 83 tests. Review found and fixed a
   duplicate-ID race (writes now serialized) and optimistic blank input; thunk errors carry `code` because Redux drops `status`.
 - 2026-09-18 — Claude Code: scaffold (step 3) done; docs aligned (ADR-0002/0004 amended, 0005–0007 added);
