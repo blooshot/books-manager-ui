@@ -4,7 +4,7 @@ import { getCoverFromCache } from '@/services/drive/coverCache'
 import { createDriveFileUrl, getDriveFileIdFromUrl } from '@/services/drive/links'
 import { makeStore, type AppStore } from '@/store'
 import { booksSelectors, loansSelectors, selectOpenLoanByBookId } from '@/store/selectors'
-import { addBook, borrowBook, editBook, loadAll, returnBook } from '@/store/libraryThunks'
+import { addBook, archiveBook, borrowBook, editBook, loadAll, restoreBook, returnBook } from '@/store/libraryThunks'
 import { discardEntry, flushOutbox, loadOutbox, retryEntry, startSync, syncAll } from '@/store/outboxThunks'
 import { selectFailedCount, selectPendingCount } from '@/store/outboxSlice'
 import { signIn } from '@/store/sessionSlice'
@@ -151,6 +151,38 @@ describe('queueing a write that cannot be sent', () => {
     expect(rig.sheets.tabs.Books[3].slice(1, 3)).toEqual(['Godan', 'Premchand'])
     expect(rig.sheets.tabs.Books[3][8]).toBe('Fiction')
     expect(rig.sheets.tabs.Books[3][9]).toBe('Hindi')
+  })
+
+  it('deleting a book while offline: hidden at once, queued as "Delete", still hidden after a refresh, applied on Sync (row kept)', async () => {
+    await loadedRig()
+    rig.network.offline = true
+    await rig.store.dispatch(archiveBook({ id: 'B-0001' })).unwrap()
+
+    const book = () => booksSelectors.selectById(state(), 'B-0001')
+    expect(book()?.archived).toBe(true)
+    expect(entries()[0]).toMatchObject({ summary: 'Delete “Dune”', op: { kind: 'editBook', patch: { archived: true } } })
+    expect(rig.sheets.tabs.Books[1][10]).toBe('')
+
+    rig.network.offline = false
+    await rig.store.dispatch(loadAll())
+    expect(book()?.archived).toBe(true) // the pending change is shown on top of what the Sheet says
+
+    await rig.store.dispatch(flushOutbox())
+    expect(rig.sheets.tabs.Books[1][10]).toBe('No')
+    expect(rig.sheets.tabs.Books).toHaveLength(3) // header + two books: nothing removed
+    expect(entries()).toHaveLength(0)
+  })
+
+  it('restoring while offline is queued as "Restore" and sends Yes', async () => {
+    await loadedRig()
+    await rig.store.dispatch(archiveBook({ id: 'B-0001' })).unwrap()
+    rig.network.offline = true
+    await rig.store.dispatch(restoreBook({ id: 'B-0001' })).unwrap()
+    expect(entries()[0].summary).toBe('Restore “Dune”')
+    rig.network.offline = false
+    await rig.store.dispatch(flushOutbox())
+    expect(rig.sheets.tabs.Books[1][10]).toBe('Yes')
+    expect(booksSelectors.selectById(state(), 'B-0001')?.archived).toBeUndefined()
   })
 
   it('edit with a new photo while offline: the photo bytes are stored with the entry', async () => {

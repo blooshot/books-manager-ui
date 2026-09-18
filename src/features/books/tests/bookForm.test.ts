@@ -157,3 +157,11 @@ describe('findDuplicate', () => {
     expect(findDuplicate(books, '', 'Herbert')).toBeUndefined()
   })
 })
+
+describe('findDuplicate and deleted books', () => {
+  it('a deleted book is not offered as a duplicate (the title is free to use again)', () => {
+    const books: Book[] = [{ id: 'B-0001', title: 'Dune', author: 'Herbert', archived: true }]
+    expect(findDuplicate(books, 'Dune', 'Herbert')).toBeUndefined()
+    expect(findDuplicate([{ ...books[0], archived: undefined }], 'dune', ' herbert ')?.id).toBe('B-0001')
+  })
+})

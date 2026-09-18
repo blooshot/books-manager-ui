@@ -122,14 +122,29 @@ describe('group by category', () => {
 })
 
 describe('where categories and language show', () => {
-  it('a card shows the language and the active categories, but never an archived one', async () => {
+  const tagsOf = (card: HTMLElement) => within(within(card).getByTestId('book-tags')).getAllByText(/./).map((t) => t.textContent)
+
+  it('a card shows the language and the active categories as tags, but never an archived one', async () => {
     renderApp({ sheets: library() })
     await screen.findByText('Atomic Habits')
     const cards = within(screen.getByRole('list', { name: 'Books' })).getAllByRole('link')
     const byTitle = (name: string) => cards.find((c) => within(c).queryByText(name)) as HTMLElement
-    expect(within(byTitle('Atomic Habits')).getByText('English · Self-help · Psychology')).toBeInTheDocument()
-    expect(within(byTitle('Godan')).getByText('Hindi')).toBeInTheDocument()
+    expect(tagsOf(byTitle('Atomic Habits'))).toEqual(['English', 'Self-help', 'Psychology'])
+    expect(tagsOf(byTitle('Godan'))).toEqual(['Hindi'])
     expect(byTitle('Old Book')).not.toHaveTextContent('Retired')
+    expect(within(byTitle('Old Book')).queryByTestId('book-tags')).not.toBeInTheDocument()
+  })
+
+  it('shows at most two categories, then folds the rest into +N (on phone and desktop)', async () => {
+    const sheets = library()
+    sheets.tabs.Categories.push(optionRow('Fiction'), optionRow('Classics'))
+    sheets.tabs.Books.push(bookRow({ id: 'B-0005', title: 'Many Tags', author: 'X', categories: 'Business, Classics, Fiction, Psychology', language: 'English' }))
+    for (const viewport of ['phone', 'desktop'] as const) {
+      const view = renderApp({ sheets, viewport })
+      const card = (await screen.findByText('Many Tags')).closest('a') as HTMLElement
+      expect(tagsOf(card)).toEqual(['English', 'Business', 'Classics', '+2'])
+      view.unmount()
+    }
   })
 
   it('the detail page lists the categories and the language, hiding archived categories', async () => {

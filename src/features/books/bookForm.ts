@@ -91,8 +91,8 @@ export function toBookPatch(values: BookFormValues, book: Book): BookPatch {
 
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
 
-/** An existing book with the same title and author (ignoring case and spacing), if any. */
+/** An existing book with the same title and author (ignoring case and spacing), if any. Deleted books do not count. */
 export function findDuplicate(books: Book[], title: string, author: string, excludeId?: string): Book | undefined {
   if (title.trim() === '' || author.trim() === '') return undefined
-  return books.find((book) => book.id !== excludeId && same(book.title, title) && same(book.author, author))
+  return books.find((book) => !book.archived && book.id !== excludeId && same(book.title, title) && same(book.author, author))
 }

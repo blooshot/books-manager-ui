@@ -90,10 +90,12 @@ describe('book detail', () => {
     expect(await screen.findByRole('heading', { name: 'Books' })).toBeInTheDocument()
   })
 
-  it('offers no delete or remove control (ADR-0004)', async () => {
-    renderApp({ sheets: library(), route: '/books/B-0001' })
-    await screen.findByRole('heading', { name: 'Dune' })
-    expect(screen.queryByRole('button', { name: /delete|remove/i })).not.toBeInTheDocument()
+  it('the only delete-like control is "Delete book", which hides the book and never removes a row (ADR-0004, ADR-0009)', async () => {
+    renderApp({ sheets: library(), route: '/books/B-0003' })
+    await screen.findByRole('heading', { name: 'Anathem' })
+    // Changed on purpose from "no delete or remove control at all": ADR-0009 allows exactly this one, and the
+    // Sheets no-delete guard (src/test/tests/no-delete.test.ts) still forbids any call that could remove a row.
+    expect(screen.getAllByRole('button', { name: /delete|remove/i }).map((b) => b.textContent)).toEqual(['Delete book'])
     expect(screen.queryByRole('link', { name: /delete|remove/i })).not.toBeInTheDocument()
   })
 })

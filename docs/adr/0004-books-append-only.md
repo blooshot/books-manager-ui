@@ -2,7 +2,8 @@
 
 ## Status
 Accepted (amended: limits of the sheet-layer protection, code-level guard,
-Drive rename-not-delete)
+Drive rename-not-delete; **amended again by ADR-0009**: the app may offer a
+"Delete book" control that only sets `Active` = No; no row is ever removed)
 
 ## Context
 Requirement: books can be created and read (and later edited), but must
@@ -41,4 +42,5 @@ they like. A rename is a `files.update`, not a delete.
   loss, not to defend against the owner themselves. Sheets version history is
   the recovery path.
 - Any future agent adding book-management features must not add a delete
-  action without first revisiting this decision.
+  action without first revisiting this decision. (ADR-0009 did that: the
+  only "delete" is the reversible `Active` flag.)

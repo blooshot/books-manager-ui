@@ -59,7 +59,7 @@ describe('escapeText', () => {
 
 describe('resolveColumns', () => {
   it('matches headers ignoring case and surrounding spaces', () => {
-    const { columns } = resolveColumns('Books', [' book id', 'TITLE', 'Author ', 'Purchase Date', 'Price paid', 'Current market price', 'Photo', 'Added at', 'Categories', 'Language'], BOOK_COLUMNS)
+    const { columns } = resolveColumns('Books', [' book id', 'TITLE', 'Author ', 'Purchase Date', 'Price paid', 'Current market price', 'Photo', 'Added at', 'Categories', 'Language', 'Active'], BOOK_COLUMNS)
     expect(columns.id).toBe(0)
     expect(columns.title).toBe(1)
     expect(columns.purchaseDate).toBe(3)
@@ -140,7 +140,7 @@ describe('buildRow', () => {
   it('places cells by column and pads to the header width', () => {
     const { columns, width } = resolveColumns('Books', ['Notes', ...BOOK_HEADER], BOOK_COLUMNS)
     const row = buildRow(columns, width, { id: 'B-0001', title: 'Dune' })
-    expect(row).toHaveLength(11)
+    expect(row).toHaveLength(12)
     expect(row[1]).toBe('B-0001')
     expect(row[2]).toBe('Dune')
     expect(row[0]).toBe('') // unknown column left empty
@@ -202,5 +202,22 @@ describe('parseOptions', () => {
 
   it('writes Yes/No and protects text that looks like a formula', () => {
     expect(optionCells({ name: '=1+1', active: false })).toEqual({ name: "'=1+1", active: 'No' })
+  })
+})
+
+describe('the Active column (deleted books)', () => {
+  const row = (active: string) => ['B-0001', 'Dune', 'Herbert', '', '', '', '', '', '', '', active]
+  const parsed = (active: string) => parseBooks([BOOK_HEADER, row(active)]).rows[0].value.archived
+
+  it.each(['No', 'no', ' N ', 'FALSE'])('%j means deleted', (cellText) => expect(parsed(cellText)).toBe(true))
+  it.each(['', 'Yes', 'yes', 'TRUE', 'anything else'])('%j means not deleted (blank counts as active)', (cellText) => expect(parsed(cellText)).toBeUndefined())
+
+  it('a Sheet without the column reads every book as not deleted', () => {
+    expect(parseBooks([BOOK_HEADER.slice(0, 10), row('').slice(0, 10)]).rows[0].value.archived).toBeUndefined()
+  })
+
+  it('is written as No for a deleted book and left empty otherwise', () => {
+    expect(bookCells({ id: 'B-0001', title: 'A', author: 'B', archived: true }).archived).toBe('No')
+    expect(bookCells({ id: 'B-0001', title: 'A', author: 'B' }).archived).toBe('')
   })
 })

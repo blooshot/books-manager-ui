@@ -8,12 +8,13 @@ export interface BookListItem {
   openLoan?: Loan
 }
 
-export type StatusFilter = 'all' | 'available' | 'borrowed'
+export type StatusFilter = 'all' | 'available' | 'borrowed' | 'archived'
 
 export const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'available', label: 'Available' },
   { value: 'borrowed', label: 'Borrowed' },
+  { value: 'archived', label: 'Archived' },
 ]
 
 /** Every book with its open loan, sorted by title (case-insensitive), then by ID. */
@@ -62,7 +63,7 @@ export function sortBookItems(items: BookListItem[], order: SortOrder): BookList
 
 /** Unknown or missing values (e.g. from a hand-edited URL) mean "all". */
 export function parseStatus(value: string | null): StatusFilter {
-  return value === 'available' || value === 'borrowed' ? value : 'all'
+  return value === 'available' || value === 'borrowed' || value === 'archived' ? value : 'all'
 }
 
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
@@ -83,6 +84,8 @@ export interface BookFilters {
 export function filterBookItems(items: BookListItem[], { query, status, category, language }: BookFilters): BookListItem[] {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean)
   return items.filter(({ book, openLoan }) => {
+    // Deleted (archived) books are hidden everywhere except the Archived filter (ADR-0009)
+    if (status === 'archived' ? !book.archived : book.archived) return false
     if (status === 'available' && openLoan) return false
     if (status === 'borrowed' && !openLoan) return false
     if (category && !(book.categories ?? []).some((name) => sameName(name, category))) return false

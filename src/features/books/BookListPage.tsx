@@ -40,14 +40,24 @@ function namesWith(names: readonly string[], current: string): { value: string; 
   return [...new Set([...names, ...(current ? [current] : [])])].map((name) => ({ value: name, label: name }))
 }
 
-/** "Hindi · Business, Self-help": language, then the book's active categories. Nothing when it has neither. */
+/** Language, then up to two of the book's active categories, as Fusion tags; the rest fold into "+N". Nothing when it has none. */
 function BookTags({ item, activeCategories }: { item: BookListItem; activeCategories: readonly string[] }) {
-  const parts = [item.book.language, ...visibleCategories(item.book, activeCategories)].filter(Boolean)
-  if (parts.length === 0) return null
-  return <span className="truncate text-xs text-muted-foreground">{parts.join(' · ')}</span>
+  const categories = visibleCategories(item.book, activeCategories)
+  const shown = categories.slice(0, 2)
+  const hidden = categories.length - shown.length
+  const tags = [item.book.language, ...shown].filter((tag): tag is string => Boolean(tag))
+  if (tags.length === 0 && hidden === 0) return null
+  return (
+    <div className="flex flex-wrap gap-1.5" data-testid="book-tags">
+      {tags.map((tag) => (
+        <span key={tag} className="bm-tag">{tag}</span>
+      ))}
+      {hidden > 0 && <span className="bm-tag" title={categories.slice(2).join(', ')}>+{hidden}</span>}
+    </div>
+  )
 }
 
-/** Desktop: product-style tiles. The cover fills the top, then title, author, prices and status. */
+/** Desktop: the Fusion product card. Cover block on top, then title, author, tags, price and status. */
 function BookGrid({ items, label, activeCategories }: { items: BookListItem[]; label: string; activeCategories: readonly string[] }) {
   return (
     <ul aria-label={label} className="grid grid-cols-3 gap-4 lg:grid-cols-4">
@@ -55,30 +65,23 @@ function BookGrid({ items, label, activeCategories }: { items: BookListItem[]; l
         const { book } = item
         return (
           <li key={book.id}>
-            <Link
-              to={`/books/${book.id}`}
-              className="flex h-full flex-col overflow-hidden rounded-lg border bg-card transition duration-150 hover:-translate-y-0.5 hover:border-primary hover:shadow-md focus-visible:border-primary motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-            >
-              <div className="flex h-60 items-center justify-center bg-secondary/40 p-3">
+            <Link to={`/books/${book.id}`} className="bm-card bm-card-interactive flex h-full flex-col outline-none">
+              <div className="bm-thumb mb-[14px] flex h-52 items-center justify-center p-3">
                 <CoverImage book={book} variant="thumb" className="h-full w-auto max-w-full" />
               </div>
-              <div className="flex flex-1 flex-col gap-1 p-3">
-                <span className="line-clamp-2 font-medium">{book.title}</span>
-                <span className="truncate text-sm text-muted-foreground">{book.author}</span>
-                <BookTags item={item} activeCategories={activeCategories} />
-                {(book.marketPrice !== undefined || book.pricePaid !== undefined) && (
-                  <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
-                    {book.marketPrice !== undefined && <span className="font-mono font-medium">{formatMoney(book.marketPrice)}</span>}
-                    {book.pricePaid !== undefined && (
-                      <span className="font-mono text-xs text-muted-foreground">Paid {formatMoney(book.pricePaid)}</span>
-                    )}
-                  </div>
-                )}
-                {book.purchaseDate && <span className="font-mono text-xs text-muted-foreground">Bought {book.purchaseDate}</span>}
-                <div className="mt-auto flex flex-col items-start gap-1 pt-2">
-                  <StatusBadge borrowed={Boolean(item.openLoan)} />
-                  <BorrowedBy item={item} />
+              <span className="bm-card-title mb-1.5 line-clamp-2">{book.title}</span>
+              <span className="bm-card-desc mb-2 truncate">{book.author}</span>
+              <BookTags item={item} activeCategories={activeCategories} />
+              {(book.marketPrice !== undefined || book.pricePaid !== undefined) && (
+                <div className="mt-3 flex flex-wrap items-baseline gap-x-2">
+                  {book.marketPrice !== undefined && <span className="bm-price">{formatMoney(book.marketPrice)}</span>}
+                  {book.pricePaid !== undefined && <span className="bm-card-desc">Paid {formatMoney(book.pricePaid)}</span>}
                 </div>
+              )}
+              {book.purchaseDate && <span className="mt-1 font-mono text-[11px] text-muted-foreground">Bought {book.purchaseDate}</span>}
+              <div className="mt-auto flex flex-col items-start gap-1 pt-3">
+                <StatusBadge borrowed={Boolean(item.openLoan)} />
+                <BorrowedBy item={item} />
               </div>
             </Link>
           </li>
@@ -88,22 +91,20 @@ function BookGrid({ items, label, activeCategories }: { items: BookListItem[]; l
   )
 }
 
+/** Phone: the same card, laid out sideways with the cover at the left. */
 function BookCards({ items, label, activeCategories }: { items: BookListItem[]; label: string; activeCategories: readonly string[] }) {
   return (
     <ul aria-label={label} className="grid gap-3">
       {items.map((item) => (
         <li key={item.book.id}>
-          <Link
-            to={`/books/${item.book.id}`}
-            className="flex gap-3 rounded-lg border bg-card p-3 transition duration-150 hover:-translate-y-0.5 hover:border-primary hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-          >
-            <CoverImage book={item.book} variant="thumb" className="w-16 shrink-0" />
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <span className="truncate font-medium">{item.book.title}</span>
-              <span className="truncate text-sm text-muted-foreground">{item.book.author}</span>
+          <Link to={`/books/${item.book.id}`} className="bm-card bm-card-interactive flex gap-3 p-4 outline-none">
+            <CoverImage book={item.book} variant="thumb" className="w-16 shrink-0 rounded-[var(--radius-sm)]" />
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <span className="bm-card-title line-clamp-2">{item.book.title}</span>
+              <span className="bm-card-desc truncate">{item.book.author}</span>
               <BookTags item={item} activeCategories={activeCategories} />
-              <span className="font-mono text-xs text-muted-foreground">{item.book.id}</span>
-              <div className="mt-1 flex flex-col items-start gap-1">
+              <span className="font-mono text-[11px] text-muted-foreground">{item.book.id}</span>
+              <div className="flex flex-col items-start gap-1">
                 <StatusBadge borrowed={Boolean(item.openLoan)} />
                 <BorrowedBy item={item} />
               </div>
@@ -135,6 +136,8 @@ export function BookListPage() {
     () => sortBookItems(filterBookItems(items, { query, status, category, language }), sort),
     [items, query, status, category, language, sort],
   )
+  // The books this view is about: deleted (archived) ones only under the Archived filter, everything else otherwise
+  const pool = useMemo(() => items.filter(({ book }) => Boolean(book.archived) === (status === 'archived')), [items, status])
   const groups = useMemo(() => (grouped ? groupBooksByCategory(visible, categories) : []), [grouped, visible, categories])
 
   function update(next: { q?: string; status?: StatusFilter; sort?: SortOrder; category?: string; language?: string; group?: boolean }) {
@@ -245,13 +248,13 @@ export function BookListPage() {
         </div>
       )}
 
-      {loading && items.length === 0 && (
+      {loading && pool.length === 0 && (
         <p role="status" className="text-muted-foreground">Loading your library…</p>
       )}
-      {library.status === 'ready' && items.length === 0 && (
-        <p className="text-muted-foreground">Your library is empty.</p>
+      {library.status === 'ready' && pool.length === 0 && (
+        <p className="text-muted-foreground">{status === 'archived' ? 'No deleted books.' : 'Your library is empty.'}</p>
       )}
-      {items.length > 0 && visible.length === 0 && (
+      {pool.length > 0 && visible.length === 0 && (
         <div className="space-y-2">
           <p className="text-muted-foreground">No books match your search.</p>
           <Button size="sm" variant="ghost" onClick={() => setParams({}, { replace: true })}>Clear search and filter</Button>
@@ -260,7 +263,7 @@ export function BookListPage() {
       {visible.length > 0 && (
         <>
           <p className="text-sm text-muted-foreground" aria-live="polite">
-            <span className="font-mono">{visible.length}</span> of <span className="font-mono">{items.length}</span> books
+            <span className="font-mono">{visible.length}</span> of <span className="font-mono">{pool.length}</span> books
           </p>
           {grouped ? (
             groups.map((group) => (

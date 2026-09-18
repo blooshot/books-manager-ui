@@ -46,7 +46,7 @@ describe('appendBook', () => {
     expect(first.id).toBe('B-0001')
     expect(second.id).toBe('B-0002')
     expect(first.title).toBe('Dune')
-    expect(sheets.tabs.Books[1]).toEqual(['B-0001', 'Dune', 'Herbert', '', 500, '', '', NOW.toISOString(), '', ''].map(String))
+    expect(sheets.tabs.Books[1]).toEqual(['B-0001', 'Dune', 'Herbert', '', 500, '', '', NOW.toISOString(), '', '', ''].map(String))
   })
 
   it('continues after the highest existing ID, including hand-added rows', async () => {
@@ -121,7 +121,7 @@ describe('updateBook', () => {
     await updateBook(client(), 'B-0001', { title: 'Dune Messiah', author: 'F. Herbert' })
     expect(sheets.tabs.Books[1][0]).toBe('B-0001')
     expect(sheets.tabs.Books[1][7]).toBe(NOW.toISOString())
-    expect(sheets.tabs.Books[2][10]).toBe('keep me')
+    expect(sheets.tabs.Books[2][11]).toBe('keep me')
   })
 
   it('clears a cell when the patch value is null', async () => {

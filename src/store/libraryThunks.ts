@@ -47,7 +47,7 @@ const titleOf = (getState: () => RootState) => (bookId: string) => booksSelector
  * Load all four tabs once and replace the store contents. Changes still waiting in the outbox are shown on top of
  * the loaded data, so a refresh never makes a pending change disappear from the screen.
  */
-export const loadAll = createAsyncThunk<void, void, ThunkConfig>(
+export const loadAll = createAsyncThunk<{ archiveSetup?: string }, void, ThunkConfig>(
   'library/loadAll',
   async (_arg, { dispatch, getState, extra }) => {
     const loaded = await withSessionCheck(dispatch, () => readAll(clientFor(getState, extra)))
@@ -55,6 +55,7 @@ export const loadAll = createAsyncThunk<void, void, ThunkConfig>(
     dispatch(booksLoaded(books))
     dispatch(loansLoaded(loans))
     dispatch(taxonomyLoaded({ categories: loaded.categories, languages: loaded.languages, setup: loaded.setup }))
+    return { archiveSetup: loaded.archiveSetup }
   },
 )
 
@@ -233,5 +234,32 @@ export const returnBook = createAsyncThunk<Loan, { bookId: string; returnedDate?
       dispatch(loanSet(previous))
       throw error
     }
+  },
+)
+
+/**
+ * "Delete book": sets Active = No. The row is never removed (ADR-0009). It is an edit, so it is optimistic, rolls back on
+ * failure and is queued when offline like any other edit. A book that is lent out must be returned first, and an
+ * older Sheet without the `Active` column cannot delete (the message says what to add).
+ */
+export const archiveBook = createAsyncThunk<Book, { id: string }, ThunkConfig>(
+  'library/archiveBook',
+  async ({ id }, { dispatch, getState }) => {
+    const book = booksSelectors.selectById(getState(), id)
+    if (!book) throw new BookNotFoundError(id)
+    const setup = getState().library.archiveSetup
+    if (setup) throw new ValidationError(setup)
+    const openLoan = selectOpenLoanByBookId(getState()).get(id)
+    if (openLoan) throw new ValidationError(`“${book.title}” is lent to ${openLoan.borrowerName}. Mark it returned before deleting it.`)
+    return dispatch(editBook({ id, patch: { archived: true } })).unwrap()
+  },
+)
+
+/** Undo a delete: Active = Yes. */
+export const restoreBook = createAsyncThunk<Book, { id: string }, ThunkConfig>(
+  'library/restoreBook',
+  async ({ id }, { dispatch, getState }) => {
+    if (!booksSelectors.selectById(getState(), id)) throw new BookNotFoundError(id)
+    return dispatch(editBook({ id, patch: { archived: false } })).unwrap()
   },
 )

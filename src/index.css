@@ -112,3 +112,54 @@
 .bm-accordion-content[data-state='open'] { animation: bm-accordion-down var(--duration-base) var(--ease); }
 .bm-accordion-content[data-state='closed'] { animation: bm-accordion-up var(--duration-base) var(--ease); }
 
+
+/*
+ * Fusion product card, mirrored from .agents/skills/custom-ui-design-system/design-system-explorer.html
+ * ("Components across contexts"). Written straight from the Fusion tokens (not Tailwind's radius and type scale, which
+ * differ) so the app-wide alignment can reuse these. Resting shadow in light mode only, as in the explorer.
+ */
+@layer components {
+  .bm-card {
+    background: var(--surface);
+    border: var(--border-w) solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    transition:
+      transform var(--duration-base) var(--ease),
+      border-color var(--duration-base) var(--ease),
+      box-shadow var(--duration-base) var(--ease);
+  }
+  :root:not([data-theme='dark']) .bm-card {
+    box-shadow: 0 1px 2px rgba(20, 33, 46, 0.06), 0 6px 16px -8px rgba(20, 33, 46, 0.12);
+  }
+  .bm-card-interactive { cursor: pointer; }
+  .bm-card-interactive:hover,
+  .bm-card-interactive:focus-visible {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+    box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.25);
+  }
+  .bm-card-interactive:active { transform: translateY(-1px) scale(0.99); }
+  @media (prefers-reduced-motion: reduce) {
+    .bm-card-interactive:hover,
+    .bm-card-interactive:focus-visible,
+    .bm-card-interactive:active { transform: none; }
+  }
+
+  .bm-thumb { background: var(--surface-2); border-radius: var(--radius-md); }
+  .bm-card-title { font-family: var(--font-body); font-size: var(--text-md); font-weight: 600; line-height: var(--leading-normal); }
+  .bm-card-desc { font-size: var(--text-sm); color: var(--text-muted); line-height: var(--leading-normal); }
+  .bm-price { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 700; line-height: var(--leading-tight); }
+  .bm-tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.2;
+    padding: var(--space-1) 9px;
+    border-radius: var(--radius-full);
+    background: var(--surface-2);
+    color: var(--text-muted);
+    border: var(--border-w) solid var(--border);
+    white-space: nowrap;
+  }
+}

@@ -10,6 +10,8 @@ export interface BookRowInput {
   addedAt?: string
   categories?: string
   language?: string
+  /** A deleted (archived) book: the Active cell says No. */
+  archived?: boolean
 }
 
 export const bookRow = (b: BookRowInput): string[] => [
@@ -23,6 +25,7 @@ export const bookRow = (b: BookRowInput): string[] => [
   b.addedAt ?? '',
   b.categories ?? '',
   b.language ?? '',
+  b.archived ? 'No' : '',
 ]
 
 /** A row for the Categories or Languages tab. */

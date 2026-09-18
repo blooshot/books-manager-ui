@@ -19,6 +19,7 @@ export const BOOK_HEADER = [
   'Added at',
   'Categories',
   'Language',
+  'Active',
 ]
 export const OPTION_HEADER = ['Name', 'Active']
 export const LOAN_HEADER = [

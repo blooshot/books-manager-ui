@@ -38,10 +38,12 @@ deviating.
    features unless explicitly asked. There is exactly one signed-in user.
 2. **$0 budget.** Do not introduce paid services, or any service that
    requires its own backend/server to run (e.g. Supabase, Firebase).
-3. **Books are append-only.** Never implement, expose, or call a delete
-   or clear operation on the `Books` tab, in the UI or in code. Add and
-   edit are fine; delete is not. The same goes for Drive: no file-delete
-   calls (replaced covers are renamed, not deleted). See ADR-0004.
+3. **No row is ever removed.** Never implement or call a delete or clear
+   operation on the `Books` tab (or any tab), in the UI or in code. Add and
+   edit are fine. The app's **Delete book** only sets `Active` = No (a cell
+   edit; the book is hidden and can be restored). The same goes for Drive: no
+   file-delete calls (replaced covers are renamed, not deleted). See
+   ADR-0004 and ADR-0009.
 4. **No backend component.** All API calls happen client-side using the
    signed-in user's own OAuth token. Never introduce a server, a proxy,
    or a service-account credential embedded in client code.
@@ -88,6 +90,7 @@ hand-typed and app-written values read back identically.
 | Added at | ISO timestamp, audit only |
 | Categories | Category names joined by `, ` (a book can have several). Optional column: an older Sheet without it still works. Names never contain a comma |
 | Language | One language name. Optional column, like Categories |
+| Active | Yes/No, blank = Yes. **Delete book sets No** (hidden, restorable, never removed). Optional column: an older Sheet without it works but cannot delete. ADR-0009 |
 
 ### `Categories` and `Languages` tabs
 Same shape, one row per entry (optional tabs: without them the app works and says what to add). ADR-0008.
@@ -170,8 +173,9 @@ A book that is already out cannot be borrowed again.
 5. Borrow / return — name (autocomplete), date/time (default now), place;
    return is one tap with date/time defaulting to now. Dialog on desktop,
    bottom Sheet on phone
-6. Search / filter by title, author, status, category or language, group by
-   category, sort by purchase date (client-side)
+6. Search / filter by title, author, status (All / Available / Borrowed /
+   Archived), category or language, group by category, sort by purchase date
+   (client-side). Deleted books appear only under Archived
 7. Lent out — grouped by borrower (Accordion): who holds which books, since when
 8. Pending changes — what is waiting to be sent (retry / discard failed ones)
 9. Categories & languages — add, rename, archive and restore the two lists
@@ -189,7 +193,9 @@ light, with a manual toggle (persisted in `localStorage`); do not hardcode color
 - *Borrowed* is a **neutral** pill (`surface-2` + `text`), not tertiary.
 - `danger` = errors only (failed write/sync). Extension to Fusion; see the
   design-system doc.
-- Manrope for UI; IBM Plex Mono for Book IDs, dates, times, and ₹ amounts.
+- Manrope for UI and for the price on a book card (Fusion product card, 18px
+  bold); IBM Plex Mono for Book IDs, dates, times, tags, and the smaller ₹
+  amounts ("Paid …").
   Self-host fonts with `@fontsource`.
 - Form controls are 16px on mobile (avoids iOS focus-zoom).
 - Honour `prefers-reduced-motion`.
@@ -259,3 +265,4 @@ above:
 - `0006-write-through-outbox-sync.md`
 - `0007-drive-scope-and-photo-pipeline.md`
 - `0008-categories-and-languages.md`
+- `0009-books-archive-not-delete.md`

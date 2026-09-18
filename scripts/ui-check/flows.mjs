@@ -5,6 +5,7 @@
 import { BOOK_HEADER } from './stubs.mjs'
 
 const OLD_BOOK_HEADER = BOOK_HEADER.slice(0, 8)
+const resourceNames = (page) => page.evaluate(() => performance.getEntriesByType('resource').map((r) => r.name))
 
 import { mkdirSync } from 'node:fs'
 
@@ -112,6 +113,7 @@ export const flows = [
       await signIn(page)
       await click(page, /^Add book$/)
       await waitForHash(page, '#/books/new')
+      await waitForText(page, 'Save book') // the form is a separate file, loaded when first opened
       await fill(page, /^Title/, 'Neuromancer')
       await fill(page, /^Author/, 'William Gibson')
       await fill(page, /^Price paid/, '300')
@@ -230,6 +232,91 @@ export const flows = [
       await page.evaluate(() => { location.hash = '#/categories' })
       await waitForText(page, 'Add a tab named "Categories"')
       await waitForText(page, 'Add a tab named "Languages"')
+    },
+  },
+  {
+    name: 'delete a book: it only sets Active to No (row kept), leaves the list, shows under Archived, and can be restored',
+    async run({ page, open, world }) {
+      await open('#/books/B-0001')
+      await signIn(page)
+      await waitForText(page, 'Borrow history')
+      await click(page, /^Delete book$/)
+      await waitFor(page, () => document.querySelector('[role=dialog]')?.textContent.includes('not erased from your Sheet'))
+      await page.evaluate(() => [...document.querySelectorAll('[role=dialog] button')].find((b) => b.textContent.trim() === 'Delete book').click())
+      await waitForHash(page, '#/')
+      await waitFor(page, () => document.body.innerText.includes('Emma') && !document.body.innerText.includes('Dune'))
+      expectEqual(world.sheets.Books.length, 4, 'no row removed from the Books tab')
+      expectEqual(world.sheets.Books[1].slice(0, 2), ['B-0001', 'Dune'], 'the row is still there')
+      expectEqual(world.sheets.Books[1][10], 'No', 'Active cell')
+      expect(world.writes.every((w) => !/delete|clear/i.test(w)), 'no delete or clear call was made')
+
+      await click(page, /^Archived$/)
+      await waitForHash(page, '#/?status=archived')
+      await waitForText(page, 'Dune')
+      await click(page, /Dune/)
+      await waitForText(page, 'This book is deleted')
+      await click(page, /^Restore book$/)
+      await waitFor(page, () => !document.body.innerText.includes('This book is deleted'))
+      expectEqual(world.sheets.Books[1][10], 'Yes', 'Active cell after restoring')
+      expect((await visibleButtons(page)).includes('Delete book'), 'Delete book is offered again after restoring')
+    },
+  },
+  {
+    name: 'pages load on demand: the add form is not downloaded until it is opened',
+    async run({ page, open }) {
+      await open('#/')
+      await signIn(page)
+      await waitForText(page, 'The Left Hand of Darkness')
+      expect(!(await resourceNames(page)).some((name) => name.includes('BookFormPage')), 'the add form was downloaded with the first screen')
+      await page.evaluate(() => { location.hash = '#/books/new' })
+      await waitForText(page, 'Save book')
+      expect((await resourceNames(page)).some((name) => name.includes('BookFormPage')), 'the add form should load when opened')
+    },
+  },
+  {
+    name: 'book cards follow the Fusion product card (radius, padding, type sizes, tags) in a real browser, light and dark',
+    async run({ page, open }) {
+      await open('#/', { width: 1280, height: 800 })
+      await signIn(page)
+      await waitForText(page, 'The Left Hand of Darkness')
+      const measure = () =>
+        page.evaluate(() => {
+          const card = document.querySelector('ul[aria-label=Books] a.bm-card')
+          const px = (el, prop) => getComputedStyle(el)[prop]
+          const first = (selector) => card.querySelector(selector)
+          return {
+            radius: px(card, 'borderRadius'),
+            padding: px(card, 'paddingTop'),
+            title: [px(first('.bm-card-title'), 'fontSize'), px(first('.bm-card-title'), 'fontWeight')],
+            author: px(first('.bm-card-desc'), 'fontSize'),
+            tagFont: [px(first('.bm-tag'), 'fontSize'), px(first('.bm-tag'), 'fontFamily').includes('IBM Plex Mono'), px(first('.bm-tag'), 'borderRadius')],
+            price: [px(first('.bm-price'), 'fontSize'), px(first('.bm-price'), 'fontWeight'), px(first('.bm-price'), 'fontFamily').includes('Manrope')],
+            shadow: px(card, 'boxShadow') !== 'none',
+          }
+        })
+      expectEqual(
+        await measure(),
+        { radius: '14px', padding: '20px', title: ['16px', '600'], author: '13px', tagFont: ['11px', true, '999px'], price: ['18px', '700', true], shadow: true },
+        'Fusion card styles (light)',
+      )
+      mkdirSync(SHOTS, { recursive: true })
+      await page.screenshot({ path: `${SHOTS}cards-light.png` })
+      await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
+      await sleep(400) // let the 150ms colour and shadow transitions finish before measuring
+      const dark = await measure()
+      expectEqual({ ...dark, shadow: undefined }, { radius: '14px', padding: '20px', title: ['16px', '600'], author: '13px', tagFont: ['11px', true, '999px'], price: ['18px', '700', true], shadow: undefined }, 'Fusion card styles (dark)')
+      expectEqual(dark.shadow, false, 'no resting shadow in dark mode (dark relies on the hover shadow)')
+      await page.screenshot({ path: `${SHOTS}cards-dark.png` })
+      await page.evaluate(() => { document.documentElement.dataset.theme = 'light' })
+      await page.setViewport({ width: 390, height: 844 })
+      await waitFor(page, () => document.querySelector('nav[aria-label=Main].fixed'))
+      const phone = await page.evaluate(() => {
+        const card = document.querySelector('ul[aria-label=Books] a.bm-card')
+        return { radius: getComputedStyle(card).borderRadius, title: getComputedStyle(card.querySelector('.bm-card-title')).fontSize, sideScroll: document.documentElement.scrollWidth > window.innerWidth }
+      })
+      expectEqual(phone, { radius: '14px', title: '16px', sideScroll: false }, 'phone card')
+      await sleep(400)
+      await page.screenshot({ path: `${SHOTS}cards-phone.png` })
     },
   },
   {

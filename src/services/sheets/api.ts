@@ -54,6 +54,8 @@ export interface LibraryData {
   languages: ListOption[]
   /** For each list that cannot be used yet, what the owner has to add to the Sheet. Absent = ready. */
   setup: Partial<Record<OptionList, string>>
+  /** Set when the Books tab has no `Active` column: deleting (archiving) a book is not possible until it is added. */
+  archiveSetup?: string
 }
 
 const OPTION_TABS: Record<OptionList, string> = { categories: CATEGORIES_TAB, languages: LANGUAGES_TAB }
@@ -99,6 +101,7 @@ export async function readAll(client: SheetsClient): Promise<LibraryData> {
       categories: options.categories,
       languages: options.languages,
       setup,
+      archiveSetup: books.columns.archived === -1 ? `Add an "${BOOK_COLUMNS.archived}" column to the Books tab to be able to delete books. See README > Sheet setup.` : undefined,
     }
   }
   throw new SheetTabMissingError(CATEGORIES_TAB)
@@ -122,10 +125,14 @@ function requireText(value: string | undefined, label: string): string {
 }
 
 /** Refuses to write a value into a Books column this Sheet doesn't have yet, since it would be lost without a word. */
-function requireBookColumns(columns: { categories: number; language: number }, wants: { categories?: unknown[]; language?: unknown }): void {
+function requireBookColumns(
+  columns: { categories: number; language: number; archived: number },
+  wants: { categories?: unknown[]; language?: unknown; archived?: boolean },
+): void {
   const missing: string[] = []
   if (wants.categories?.length && columns.categories === -1) missing.push(BOOK_COLUMNS.categories)
   if (wants.language && columns.language === -1) missing.push(BOOK_COLUMNS.language)
+  if (wants.archived && columns.archived === -1) missing.push(BOOK_COLUMNS.archived)
   if (missing.length > 0) throw new SheetSchemaError(BOOKS_TAB, missing)
 }
 
@@ -183,6 +190,8 @@ export interface BookPatch {
   /** An empty array or `null` clears the cell. */
   categories?: string[] | null
   language?: string | null
+  /** `true` = delete (Active = No), `false` = restore. Never removes the row (ADR-0009). */
+  archived?: boolean
 }
 
 /** Writes only the changed cells, so columns the app doesn't know about are never overwritten. */
@@ -217,6 +226,7 @@ export async function updateBook(client: SheetsClient, bookId: string, patch: Bo
   const categories = patch.categories ? parseNameList(patch.categories.join(',')) : []
   set('categories', joinNameList(categories) ? escapeText(joinNameList(categories)) : '', () => (merged.categories = categories.length > 0 ? categories : undefined))
   set('language', patch.language ? escapeText(patch.language.trim()) : '', () => (merged.language = patch.language?.trim() || undefined))
+  set('archived', patch.archived ? 'No' : 'Yes', () => (merged.archived = patch.archived || undefined))
 
   if (updates.length > 0) await client.batchUpdate(updates)
   return merged

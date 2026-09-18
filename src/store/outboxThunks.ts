@@ -192,7 +192,8 @@ export const syncAll = createAsyncThunk<void, void, ThunkConfig>('outbox/syncAll
 export const startSync = createAsyncThunk<void, void, ThunkConfig>('outbox/start', async (_arg, { dispatch, getState }) => {
   if (!getState().outbox.loaded) await dispatch(loadOutbox())
   const waiting = getState().outbox.entries.some((entry) => entry.status === 'pending')
-  await dispatch(waiting ? syncAll() : loadAll())
+  if (waiting) await dispatch(syncAll())
+  else await dispatch(loadAll())
 })
 
 /** Give up a queued change (or a failed one) without sending it. Only the local queue entry goes; no Sheet data. */

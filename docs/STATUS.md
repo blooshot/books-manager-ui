@@ -4,7 +4,7 @@ Read this after `AGENTS.md` at the start of every session; update it at the end
 of every session or milestone (protocol in `AGENTS.md`; how to keep it consistent: `conductor/workflow.md`).
 Newest entries at the top of "Log". Keep it short and factual.
 
-**Last updated:** 2026-09-19 · **By:** Claude Code (categories and languages, desktop layout, tests in `tests/` folders)
+**Last updated:** 2026-09-19 · **By:** Claude Code (delete-as-archive for books, Fusion book cards, code splitting)
 
 ## Where we are
 
@@ -23,10 +23,11 @@ Build order (from `AGENTS.md`):
 | 6c | Screens: borrow / return, Lent out | **Done** (Claude, committed `1ff697f`) — fake Sheets/Drive, jsdom only |
 | 7 | Outbox + Sync button | **Done** (Claude, committed `7e48b8a`) — fakes only |
 | 7b | Owner's UI request: header menu, card grid, sort, **categories + languages** (ADR-0008) | **Done** (Claude) — fakes and stubbed Chrome only; **owner must add the two tabs and two columns to the real Sheet** (README > Sheet setup) |
-| 8 | Protected range on `Books` (verify owner behaviour, ADR-0004) | **Next**, owner-driven (brief below) — needs the real Sheet |
+| 7c | Owner's follow-up: **Delete book** (Active flag, ADR-0009), Fusion book cards, lazy-loaded pages | **Done** (Claude) — fakes and stubbed Chrome only; **owner must add an `Active` column at the end of `Books`** |
+| 8 | Protected range on `Books` (ADR-0004) | **Set by the owner** (2026-09-19): only the owner can edit the tab. Reported, not re-tested by us; the scratch-copy API test in the brief below was not run |
 | 9 | Deploy + CI/CD | Not started (brief below) |
 
-`npm run verify` passes: **578 tests in 40 files**; `npm run ui:check` passes **9 flows**, build OK, 1 known lint warning (generated `button.tsx`).
+`npm run verify` passes: **613 tests in 41 files**; `npm run ui:check` passes **12 flows**, build OK, 1 known lint warning (generated `button.tsx`).
 
 ## What exists
 
@@ -141,6 +142,16 @@ selectors (`selectOpenLoanByBookId`, `selectLentOutByBorrower`). Fusion tokens i
 
 **Dropdowns** — `components/ui/select.tsx` is a themed Radix Select (`options`, `value`, `onValueChange`; `value: ''` is a normal choice such as "All categories"). Used for Sort by, Category, Language (list) and Language (form). A convention test forbids a native `<select>` in production code. In tests use `src/test/select.ts` (`chooseOption`, `optionsOf`, `shownIn`): open the trigger, then click the option; `setup.ts` polyfills the browser APIs Radix needs.
 
+**Delete book, ADR-0009** (owner-approved change to hard rule 3: nothing is ever removed, "delete" = `Active` = No):
+- Sheet: optional `Books` column `Active` (Yes/No, blank = active); `Book.archived`; `mapping.ts` parses it, `updateBook` writes `No` (delete) / `Yes` (restore); a missing column throws `SheetSchemaError` before any write or upload; `readAll` returns `archiveSetup`, kept in `librarySlice`.
+- Store: `archiveBook` / `restoreBook` (in `libraryThunks.ts`) wrap `editBook`, so they are optimistic, roll back, and are queued offline (`Delete “X”` / `Restore “X”` in Pending changes). `archiveBook` refuses a lent-out book and a Sheet without the column.
+- UI: **Delete book** on the detail page (the confirm dialog says the book is hidden, not erased); a deleted book shows a banner with **Restore book** and offers no Borrow/Edit; list filter **Archived** (`?status=archived`); All/Available/Borrowed, counts, grouping, the category-page counts and the duplicate-title warning ignore deleted books. IDs are never reused (max over all rows).
+- Guards: `src/test/tests/no-delete.test.ts` unchanged. **Changed on purpose:** `BookDetailPage.test.tsx` "no delete or remove control" now asserts the only such control is **Delete book**; every other "no delete" UI test is unchanged.
+
+**Fusion book cards**: `.bm-card`, `.bm-card-title`, `.bm-card-desc`, `.bm-price`, `.bm-tag`, `.bm-thumb` in `index.css`, mirroring the explorer's product card straight from the Fusion tokens. The desktop grid card and the phone list card use them; language and up to two categories are tags (`+N` for more); the price is Manrope 18px bold (AGENTS.md updated); resting shadow in light mode only, hover lift per Fusion. `ui:check` asserts the computed values in a real browser (14px radius, 20px padding, 16px/600 title, 13px author, 11px mono tags, 18px/700 price) in light and dark, and the phone card.
+
+**Code splitting**: `src/pages.ts` lazy-loads the detail, add/edit, Lent out, Categories and Pending pages (`React.lazy`, one Suspense in `AppLayout`); the list and sign-in stay in the main file. Main JS 522 kB -> 326 kB (166 -> 104 kB gzipped), no size warning. Tests replace `@/pages` with `src/test/eagerPages.ts` (in `setup.ts`) so a page exists on first render; real lazy loading is checked in Chrome by `ui:check` ("pages load on demand").
+
 **Categories and languages** (ADR-0008; the owner's request after step 7):
 - Sheet: tabs `Categories` / `Languages` (`Name`, `Active`) and `Books` columns `Categories` (names joined by `, `) / `Language`. All optional on read: `readAll` asks for four ranges in one `batchGet`, and if a list tab is missing repeats without it (`SheetTabMissingError.tab`); `LibraryData.setup`
   says what to add. Writing a category/language into a Books column the Sheet lacks throws `SheetSchemaError` (before any cover upload). `mapping.ts`: `OPTIONAL_BOOK_FIELDS` (column index -1), `parseNameList`, `parseOptions`.
@@ -159,8 +170,13 @@ no `any`, default exports only for App/main/slices.
 **Conductor** — `conductor/` context files defer to `AGENTS.md`. Coding rules for every tool: `conductor/code_styleguides/`
 (`typescript.md`, `testing.md`, `google-apis.md`); past mistakes and their rules: `conductor/lessons-learned.md`.
 
+## Backlog
+
+- **Align the whole app to Fusion's scale** (asked for by the owner, deliberately not done yet). Tailwind's radius and type scale are Tailwind's defaults, not Fusion's (`rounded-lg` is 8px, not 14px; `text-sm` is 14px, not 13px). Only the book cards use Fusion's values (the `.bm-*` classes). To do: map Tailwind's radius and `text-*` sizes to the Fusion tokens in `@theme` (or move more components onto `.bm-*` classes), then do a visual pass on every screen in light and dark, at phone and desktop widths.
+
 ## Not verified (be honest about these)
 
+- **Delete book has never run against the real Sheet.** The `Active` column does not exist there yet (owner action: add a column headed `Active` at the end of `Books`, README > Sheet setup). Not verified: that real Google reads a blank `Active` cell as blank (the app treats blank as active) and accepts the `Yes`/`No` writes; and that the owner-only protection lets the app's cell edit through (it should, since the app signs in as the owner). If the real Sheet shows a *permission* error on delete, check the protection first.
 - **Categories and languages have never run against the real Sheet.** The two tabs and two columns do not exist there yet (owner action). Only `FakeSheets`, jsdom and the stubbed-Chrome check ran. Unverified against real Google: that a missing tab really returns `Unable to parse range: Categories` in a *four-range* `batchGet` (the fallback depends on it; the three-range case matched the earlier real 400), that `Active` = `Yes/No` typed cells read back as strings, and rename sweeping many rows in one `batchUpdate`.
 
 - **Verified by the owner against real Google (2026-09-19):** sign-in, loading the Sheet, adding and editing books, **photo upload and replace on real Drive**, borrow, return, and the Lent out screen all worked on the owner's real Sheet. (Reported as working; details such as
@@ -212,7 +228,7 @@ no `any`, default exports only for App/main/slices.
 - **Errors that used to roll back now queue.** An expired session no longer fails a save; it saves locally and the "N pending" indicator appears. Tests written for the old behaviour had to change (borrow dialog, add form, photo thunk).
 - **`FakeSheets` parses ISO datetimes like real Sheets** (stores them as a US-style date-time); a value that must round-trip exactly must be forced text. Do not loosen that.
 - **`renderApp` uses an in-memory outbox by default** (`outbox` option to inject one, `UnavailableOutbox` for the fallback); `makeStore` alone uses IndexedDB, which is absent in most test files (queueing then falls back to rollback).
-- **UI must not unmount an editing surface because of the data it edits.** Borrowing flips the book to "borrowed" optimistically, which used to unmount the Borrow dialog mid-save (state and error lost; a blank dialog reappeared on failure).
+- **UI must not unmount an editing surface because of the data it edits** (hit again by Delete book: the optimistic delete flipped `book.archived` and the page swapped the control out, losing the dialog and its error; `DeleteBookControl` and `ArchivedBanner` now stay mounted and decide what to show). Borrowing flips the book to "borrowed" optimistically, which used to unmount the Borrow dialog mid-save (state and error lost; a blank dialog reappeared on failure).
   Keep dialogs mounted independent of the optimistic state, and remember what a dialog operates on when it opens.
 - **Radix modals hide the rest of the page from assistive tech** (`aria-hidden` on everything outside), so `getByRole` cannot see the app behind an open dialog; query it by text, or close the dialog first.
 - **Never move focus with a timer.** `requestAnimationFrame` after a failed submit fired mid-typing and pulled focus into the next invalid field (tests typing quickly saw "D" in Title and "une" in Author).
@@ -254,6 +270,8 @@ Decisions needed first: static host (Cloudflare Pages / Netlify / GitHub Pages) 
 
 ## Log
 
+- 2026-09-19 — Claude Code: **delete book (archive), Fusion book cards, code splitting** (the owner's follow-up requests). ADR-0009 lets the app offer **Delete book**, which only sets `Active` = No; the owner set the step 8 protection (owner-only editing) and chose the archive approach. Cards now follow the Fusion explorer's product card; pages load on demand.
+  **Verified:** `npm run verify` 613 tests / 41 files, build OK, no size warning (main JS 522 -> 326 kB), 1 known lint warning; `npm run ui:check` 12/12, including delete -> leaves the list -> Archived -> restore in real Chrome, "add form not downloaded until opened", and computed Fusion styles in light, dark and phone (screenshots looked at). 7 control checks on the delete feature red -> green. **Found and fixed:** I repeated the known "editing surface unmounts because of the data it edits" mistake (the optimistic delete replaced the confirm dialog, losing the error on failure): caught by a test, fixed by keeping the control mounted; the add-book Chrome flow raced the lazily loaded form (the flow now waits for it). **Changed on purpose:** the `BookDetailPage` "no delete control" assertion, and hard rule 3's wording in AGENTS.md. **Not verified:** the real Sheet (needs the `Active` column), a real phone, real cover images in the card grid (the stub has none). **Deviations:** none from the approved plan. **Follow-ups:** owner adds the `Active` column; Fusion alignment of the rest of the app (Backlog); step 9.
 - 2026-09-19 — Claude Code: **dropdowns are now the themed Select.** The owner saw the dropdown lists looked unstyled: they were native `<select>` elements, whose open list the browser draws. Replaced with a Radix Select (same `radix-ui` package the dialog uses, no new dependency) in the sort, category and language controls and the form's language field; the open list uses the Fusion card, border, highlight and check mark, with the same open motion as dialogs (reduced motion respected).
   **Verified:** `npm run verify` and `npm run ui:check` 9/9 (the flow now opens the dropdown with real mouse presses and saves `dropdown-open.png`, which I looked at); the convention test fails when a native `<select>` is planted. **Not verified:** on a real phone (touch, and how the popover sits above a mobile keyboard), dark mode, keyboard typeahead in a real browser (Radix provides it; only clicks were exercised). **Build:** the main JS bundle is now 518 kB (165 kB gzipped), just over Vite's 500 kB warning (a warning only; I did not measure it before this change, so I can't say how much the Select added). Code-splitting the routes would fix it if it matters. **Note:** the fixed phone bottom nav can cover a control scrolled to the very bottom edge of the screen; the Chrome flow had to scroll it to the middle first. Not changed.
 - 2026-09-19 — Claude Code: **categories and languages (stage 2 of the owner's UI request).** Designed with the owner: multiple categories per book, "delete" = archive (`Active`), languages as a managed list too, list writes online-only (ADR-0008, new). Built the Sheets layer, store, form pickers, list filters/grouping, detail rows and the `/categories` page.

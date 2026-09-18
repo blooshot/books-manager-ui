@@ -24,7 +24,8 @@ export function OptionSection({ list }: { list: OptionList }) {
   const dispatch = useAppDispatch()
   const options = useAppSelector((s) => s.taxonomy[list])
   const setup = useAppSelector((s) => s.taxonomy.setup[list])
-  const books = useAppSelector(booksSelectors.selectAll)
+  const allBooks = useAppSelector(booksSelectors.selectAll)
+  const books = useMemo(() => allBooks.filter((book) => !book.archived), [allBooks]) // deleted books are not counted
   const [newName, setNewName] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
   const [draft, setDraft] = useState('')

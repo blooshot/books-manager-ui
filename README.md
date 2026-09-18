@@ -27,7 +27,7 @@ Its ID is the long part of the URL: `https://docs.google.com/spreadsheets/d/<THI
 
    `Books`
    ```
-   Book ID	Title	Author	Purchase date	Price paid	Current market price	Photo	Added at	Categories	Language
+   Book ID	Title	Author	Purchase date	Price paid	Current market price	Photo	Added at	Categories	Language	Active
    ```
    `Borrowers`
    ```
@@ -44,7 +44,9 @@ Its ID is the long part of the URL: `https://docs.google.com/spreadsheets/d/<THI
    Then manage the lists in the app (**Categories** in the header menu). The `Categories` and `Languages` tabs and the `Categories` / `Language` columns on
    `Books` are optional: an older Sheet without them still works, and the app tells you what to add. Never delete rows from these tabs by hand if you want to
    restore something later: the app archives instead (`Active` = `No`), and a hand-typed row with no `Active` value counts as active.
-5. Optional: freeze row 1, and protect the `Books` tab (see `docs/STATUS.md`, step 8).
+5. To let the app **delete** books (it only hides them: `Active` = `No`), the `Books` header needs the `Active` column (already in the line above). Leave it blank for
+   normal books. Without it the app still works, but the Delete button is disabled and says what to add.
+6. Optional: freeze row 1, and protect the `Books` tab (see `docs/STATUS.md`, step 8).
 
 If the app says *"The Sheet has no tab named ..."* or *"is missing column(s) ..."*, this section is the fix.
 

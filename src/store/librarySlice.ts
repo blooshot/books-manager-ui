@@ -7,6 +7,8 @@ export interface LibraryState {
   error: string | null
   /** Epoch ms of the last successful load. */
   loadedAt: number | null
+  /** Why deleting a book is not possible yet (the Books tab has no `Active` column). Absent = it is. */
+  archiveSetup?: string
 }
 
 const initialState: LibraryState = { status: 'idle', error: null, loadedAt: null }
@@ -23,9 +25,10 @@ const librarySlice = createSlice({
         state.status = 'loading'
         state.error = null
       })
-      .addCase(loadAll.fulfilled, (state) => {
+      .addCase(loadAll.fulfilled, (state, { payload }) => {
         state.status = 'ready'
         state.loadedAt = Date.now()
+        state.archiveSetup = payload.archiveSetup
       })
       .addCase(loadAll.rejected, (state, { error }) => {
         state.status = 'error'

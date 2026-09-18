@@ -56,6 +56,7 @@ const FIELD_LABELS: Record<string, string> = {
   photoUrl: 'photo',
   categories: 'categories',
   language: 'language',
+  archived: 'deleted or restored',
 }
 
 /** One line for the pending list, e.g. `Lend “Dune” to Ravi`. `titleOf` looks up a book's title by ID. */
@@ -65,6 +66,9 @@ export function describeOp(op: OutboxOp, titleOf: (bookId: string) => string | u
     case 'addBook':
       return `Add “${op.input.title}” by ${op.input.author}${op.hasPhoto ? ' (with cover photo)' : ''}`
     case 'editBook': {
+      if (Object.keys(op.patch).length === 1 && op.patch.archived !== undefined && !op.hasPhoto) {
+        return `${op.patch.archived ? 'Delete' : 'Restore'} ${quoted(op.bookId)}`
+      }
       const fields = Object.keys(op.patch).map((field) => FIELD_LABELS[field] ?? field)
       if (op.hasPhoto) fields.push('cover photo')
       return `Edit ${quoted(op.bookId)}${fields.length > 0 ? ` (${fields.join(', ')})` : ''}`

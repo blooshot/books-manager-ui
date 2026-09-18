@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
-import { afterEach } from 'vitest'
+import { afterEach, vi } from 'vitest'
 import { setClockForTests } from '@/lib/clock'
 
 // Vitest runs with globals off, so Testing Library's automatic cleanup is not registered
@@ -30,3 +30,6 @@ globalThis.ResizeObserver ??= class {
   unobserve() {}
   disconnect() {}
 }
+
+// Pages load on demand in the app; in tests they are there on first render (real lazy loading is checked in a browser by `npm run ui:check`)
+vi.mock('@/pages', () => import('@/test/eagerPages'))

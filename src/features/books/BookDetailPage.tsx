@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import { Link, useParams } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { visibleCategories } from '@/features/books/bookList'
+import { ArchivedBanner, DeleteBookControl } from '@/features/books/DeleteBookControl'
 import { BorrowHistory } from '@/features/books/BorrowHistory'
 import { StatusBadge } from '@/features/books/StatusBadge'
 import { BookActions } from '@/features/loans/BookActions'
@@ -63,12 +64,14 @@ export function BookDetailPage() {
           <div className="space-y-2">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <h1 id="book-title" className="font-display text-2xl font-bold">{book.title}</h1>
-              <Button asChild size="sm" variant="outline">
-                <Link to={`/books/${book.id}/edit`}>
-                  <Pencil aria-hidden />
-                  Edit
-                </Link>
-              </Button>
+              {!book.archived && (
+                <Button asChild size="sm" variant="outline">
+                  <Link to={`/books/${book.id}/edit`}>
+                    <Pencil aria-hidden />
+                    Edit
+                  </Link>
+                </Button>
+              )}
             </div>
             <p className="text-muted-foreground">{book.author}</p>
             <div className="flex flex-wrap items-center gap-2">
@@ -80,7 +83,9 @@ export function BookDetailPage() {
               )}
             </div>
           </div>
-          <BookActions book={book} openLoan={openLoan} />
+          {!book.archived && <BookActions book={book} openLoan={openLoan} />}
+          <DeleteBookControl book={book} openLoan={openLoan} />
+          <ArchivedBanner book={book} />
           <dl>
             <Field label="Book ID" mono>{book.id}</Field>
             <Field label="Categories">{visibleCategories(book, activeCategories).join(', ') || '—'}</Field>

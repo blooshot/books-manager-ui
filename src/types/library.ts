@@ -14,6 +14,8 @@ export interface Book {
   categories?: string[]
   /** One language name. */
   language?: string
+  /** "Deleted" in the app: the `Active` cell says No. The row stays; the book is hidden and can be restored (ADR-0009). */
+  archived?: boolean
 }
 
 /** One row of the `Categories` or `Languages` tab. Archived ones are hidden from pickers and filters, never removed. */

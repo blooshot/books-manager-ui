@@ -17,7 +17,7 @@ window.google = { accounts: { oauth2: {
   revoke(token, done) { window.__revoked = token; done() },
 } } };`
 
-export const BOOK_HEADER = ['Book ID', 'Title', 'Author', 'Purchase date', 'Price paid', 'Current market price', 'Photo', 'Added at', 'Categories', 'Language']
+export const BOOK_HEADER = ['Book ID', 'Title', 'Author', 'Purchase date', 'Price paid', 'Current market price', 'Photo', 'Added at', 'Categories', 'Language', 'Active']
 export const OPTION_HEADER = ['Name', 'Active']
 export const LOAN_HEADER = ['Book ID', 'Borrower name', 'Borrowed date', 'Borrowed time', 'Place', 'Returned', 'Returned date', 'Returned time']
 

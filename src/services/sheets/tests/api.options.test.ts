@@ -242,3 +242,52 @@ describe('renameOption', () => {
     expect(writes()).toHaveLength(1)
   })
 })
+
+describe('deleting a book (Active flag, ADR-0009)', () => {
+  const activeCell = (row: number) => sheets.tabs.Books[row][10]
+  beforeEach(() => {
+    sheets.tabs.Books.push(bookRow({ id: 'B-0001', title: 'Dune', author: 'Herbert' }), bookRow({ id: 'B-0002', title: 'Emma', author: 'Austen' }))
+  })
+
+  it('archived: true writes No into that row\'s Active cell only', async () => {
+    const book = await updateBook(client(), 'B-0002', { archived: true })
+    expect(book.archived).toBe(true)
+    expect(activeCell(2)).toBe('No')
+    expect(activeCell(1)).toBe('')
+    expect(writes()).toHaveLength(1)
+    expect(writes()[0].body).toMatchObject({ data: [{ range: 'Books!K3', values: [['No']] }] })
+  })
+
+  it('archived: false restores it with Yes', async () => {
+    await updateBook(client(), 'B-0001', { archived: true })
+    const restored = await updateBook(client(), 'B-0001', { archived: false })
+    expect(restored.archived).toBeUndefined()
+    expect(activeCell(1)).toBe('Yes')
+  })
+
+  it('never removes a row', async () => {
+    await updateBook(client(), 'B-0001', { archived: true })
+    expect(sheets.tabs.Books).toHaveLength(3)
+    expect(sheets.tabs.Books.map((r) => r[0])).toEqual(['Book ID', 'B-0001', 'B-0002'])
+  })
+
+  it('a Sheet without the Active column refuses, names the column, and writes nothing', async () => {
+    sheets.tabs.Books = sheets.tabs.Books.map((r) => r.slice(0, 10))
+    sheets.tabs.Books[0] = BOOK_HEADER.slice(0, 10)
+    await expect(updateBook(client(), 'B-0001', { archived: true })).rejects.toThrow(/missing column\(s\): Active/)
+    expect(writes()).toHaveLength(0)
+    const data = await readAll(client())
+    expect(data.archiveSetup).toMatch(/"Active" column/)
+  })
+
+  it('readAll has no setup hint when the column exists', async () => {
+    expect((await readAll(client())).archiveSetup).toBeUndefined()
+  })
+
+  it('a deleted book\'s Book ID is never handed out again', async () => {
+    await updateBook(client(), 'B-0001', { archived: true })
+    await updateBook(client(), 'B-0002', { archived: true })
+    const next = await appendBook(client(), { title: 'New', author: 'X' }, NOW)
+    expect(next.id).toBe('B-0003')
+  })
+})

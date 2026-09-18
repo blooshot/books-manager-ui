@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design System Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Zilla+Slab:wght@400;600;700&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    transition: background .25s ease, color .25s ease;
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  /* ============ MOOD: minimal (Paper & Pine) ============ */
+  body[data-mood="minimal"] { --font-display: 'Fraunces', serif; --font-body: 'Inter', sans-serif; --font-mono: 'Inter', sans-serif; --radius: 4px; --radius-lg: 6px; --border-w: 1px; }
+  body[data-mood="minimal"][data-theme="light"] {
+    --bg: #F7F7F5; --surface: #FFFFFF; --surface-2: #EFEFEC; --text: #1A1A1A; --text-muted: #6B6B65;
+    --border: #DEDED8; --accent: #2D5F4C; --accent-text: #FFFFFF; --secondary: #C9C4B8; --secondary-text: #1A1A1A;
+    --tertiary: #8A7F6E; --tertiary-text: #FFFFFF;
+  }
+  body[data-mood="minimal"][data-theme="dark"] {
+    --bg: #16181A; --surface: #1F2224; --surface-2: #262A2C; --text: #EDEDE9; --text-muted: #9A9A94;
+    --border: #33373A; --accent: #6BB89A; --accent-text: #0E1A16; --secondary: #4A4E48; --secondary-text: #EDEDE9;
+    --tertiary: #6B6F63; --tertiary-text: #EDEDE9;
+  }
+
+  /* ============ MOOD: bold (Electric) ============ */
+  body[data-mood="bold"] { --font-display: 'Space Grotesk', sans-serif; --font-body: 'Space Grotesk', sans-serif; --font-mono: 'Space Grotesk', sans-serif; --radius: 0px; --radius-lg: 0px; --border-w: 2px; }
+  body[data-mood="bold"][data-theme="light"] {
+    --bg: #F2F0FF; --surface: #FFFFFF; --surface-2: #E6E1FF; --text: #14121F; --text-muted: #514C6B;
+    --border: #14121F; --accent: #5B3BFF; --accent-text: #FFFFFF; --secondary: #FF6F3C; --secondary-text: #14121F;
+    --tertiary: #14121F; --tertiary-text: #FFFFFF;
+  }
+  body[data-mood="bold"][data-theme="dark"] {
+    --bg: #0F0B1F; --surface: #1A1530; --surface-2: #241D40; --text: #EDEAFF; --text-muted: #A79FD1;
+    --border: #EDEAFF; --accent: #9B82FF; --accent-text: #14121F; --secondary: #FF8B5C; --secondary-text: #14121F;
+    --tertiary: #EDEAFF; --tertiary-text: #14121F;
+  }
+
+  /* ============ MOOD: warm (Sienna & Teal) ============ */
+  body[data-mood="warm"] { --font-display: 'Zilla Slab', serif; --font-body: 'Karla', sans-serif; --font-mono: 'Karla', sans-serif; --radius: 14px; --radius-lg: 20px; --border-w: 1px; }
+  body[data-mood="warm"][data-theme="light"] {
+    --bg: #FBF3EC; --surface: #FFFFFF; --surface-2: #F3E5D8; --text: #2B211C; --text-muted: #7A6B60;
+    --border: #E9D8C7; --accent: #B8562A; --accent-text: #FFFFFF; --secondary: #3B6E63; --secondary-text: #FFFFFF;
+    --tertiary: #8B5E34; --tertiary-text: #FFFFFF;
+  }
+  body[data-mood="warm"][data-theme="dark"] {
+    --bg: #201812; --surface: #2A2019; --surface-2: #352A21; --text: #F3E9DE; --text-muted: #B8A692;
+    --border: #43362B; --accent: #E08249; --accent-text: #231208; --secondary: #6FB5A8; --secondary-text: #10201C;
+    --tertiary: #B98A5E; --tertiary-text: #201812;
+  }
+
+  /* ============ MOOD: techy (Signal) ============ */
+  body[data-mood="techy"] { --font-display: 'IBM Plex Sans', sans-serif; --font-body: 'IBM Plex Sans', sans-serif; --font-mono: 'IBM Plex Mono', monospace; --radius: 2px; --radius-lg: 2px; --border-w: 1px; }
+  body[data-mood="techy"][data-theme="light"] {
+    --bg: #EEF1F5; --surface: #FFFFFF; --surface-2: #E2E7EE; --text: #10151C; --text-muted: #5B6472;
+    --border: #C7CFDA; --accent: #0B8A8A; --accent-text: #FFFFFF; --secondary: #7C5CFF; --secondary-text: #FFFFFF;
+    --tertiary: #5B6472; --tertiary-text: #FFFFFF;
+  }
+  body[data-mood="techy"][data-theme="dark"] {
+    --bg: #0A0E14; --surface: #121820; --surface-2: #19212B; --text: #DCE4EC; --text-muted: #7C8797;
+    --border: #263140; --accent: #2DD4D4; --accent-text: #04191C; --secondary: #9B7CFF; --secondary-text: #140B2E;
+    --tertiary: #7C8797; --tertiary-text: #04191C;
+  }
+
+  /* ============ MOOD: fusion (Signal Trio) ============ */
+  body[data-mood="fusion"] { --font-display: 'Manrope', sans-serif; --font-body: 'Manrope', sans-serif; --font-mono: 'IBM Plex Mono', monospace; --radius: 10px; --radius-lg: 14px; --border-w: 1px; }
+  body[data-mood="fusion"][data-theme="light"] {
+    --bg: #F5F6F1; --surface: #FFFFFF; --surface-2: #EAEBE2; --text: #1B2430; --text-muted: #5C6570;
+    --border: #DADCD1; --accent: #1F3A5F; --accent-text: #FFFFFF; --secondary: #1B6B4A; --secondary-text: #FFFFFF;
+    --tertiary: #6E7233; --tertiary-text: #FFFFFF;
+  }
+  body[data-mood="fusion"][data-theme="dark"] {
+    --bg: #0B1614; --surface: #12201D; --surface-2: #182C27; --text: #E7F3EE; --text-muted: #8FA89D;
+    --border: #24413A; --accent: #2FBFA6; --accent-text: #062420; --secondary: #4C9A7C; --secondary-text: #0E1F17;
+    --tertiary: #E2685C; --tertiary-text: #2A0B08;
+  }
+  body[data-mood="fusion"][data-theme="light"] .card { box-shadow: 0 1px 2px rgba(20,33,46,.06), 0 6px 16px -8px rgba(20,33,46,.12); }
+
+  h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; }
+  code, .mono { font-family: var(--font-mono); }
+
+  /* Controls bar */
+  .controls {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--surface); border-bottom: var(--border-w) solid var(--border);
+    padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  .mood-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .mood-tab {
+    font-family: var(--font-body); font-size: 13px; padding: 8px 14px; border-radius: var(--radius);
+    border: var(--border-w) solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer;
+  }
+  .mood-tab.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .theme-toggle {
+    font-family: var(--font-body); font-size: 13px; padding: 8px 14px; border-radius: var(--radius);
+    border: var(--border-w) solid var(--border); background: var(--surface-2); color: var(--text); cursor: pointer;
+  }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px; }
+  .intro { margin-bottom: 44px; }
+  .intro h1 { font-size: clamp(32px, 4vw, 48px); font-weight: 700; letter-spacing: -0.01em; margin-bottom: 10px; }
+  .intro p { color: var(--text-muted); font-size: 16px; max-width: 60ch; line-height: 1.6; margin: 0; }
+
+  section { margin-bottom: 52px; }
+  .section-label { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; font-family: var(--font-mono); }
+
+  /* Palette swatches */
+  .swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
+  .swatch { border-radius: var(--radius); overflow: hidden; border: var(--border-w) solid var(--border); }
+  .swatch-color { height: 64px; }
+  .swatch-label { padding: 8px 10px; background: var(--surface); font-size: 12px; font-family: var(--font-mono); color: var(--text-muted); }
+
+  /* Type scale */
+  .type-row { display: flex; align-items: baseline; gap: 20px; padding: 14px 0; border-bottom: var(--border-w) dashed var(--border); }
+  .type-row:last-child { border-bottom: none; }
+  .type-tag { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); width: 90px; flex-shrink: 0; }
+  .type-sample.display { font-family: var(--font-display); font-size: clamp(28px, 4vw, 40px); font-weight: 700; }
+  .type-sample.h1 { font-family: var(--font-display); font-size: 28px; font-weight: 600; }
+  .type-sample.h2 { font-family: var(--font-display); font-size: 21px; font-weight: 600; }
+  .type-sample.body { font-family: var(--font-body); font-size: 16px; line-height: 1.6; max-width: 52ch; }
+  .type-sample.caption { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); }
+
+  /* Buttons */
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .btn { font-family: var(--font-body); font-size: 14px; font-weight: 600; padding: 11px 20px; border-radius: var(--radius); border: var(--border-w) solid transparent; cursor: pointer; transition: opacity .15s ease, transform .1s ease, background-color .15s ease; }
+  .btn-primary { background: var(--accent); color: var(--accent-text); }
+  .btn-secondary { background: var(--secondary); color: var(--secondary-text); }
+  .btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
+  .btn:hover { opacity: .88; }
+  .btn-ghost:hover { background: var(--surface-2); opacity: 1; }
+  .btn:active { opacity: .78; transform: scale(.97); }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius); }
+
+  /* Form */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 480px; }
+  .field label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+  .field input, .field select {
+    width: 100%; font-family: var(--font-body); font-size: 14px; padding: 10px 12px; border-radius: var(--radius);
+    border: var(--border-w) solid var(--border); background: var(--surface); color: var(--text);
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .field input:hover, .field select:hover { border-color: var(--text-muted); }
+  .field input:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); outline: none; }
+
+  /* Cards grid */
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: var(--border-w) solid var(--border); border-radius: var(--radius-lg); padding: 20px; transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
+  .card.interactive { cursor: pointer; }
+  .card.interactive:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 8px 20px -10px rgba(0,0,0,.25); }
+  .card.interactive:active { transform: translateY(-1px) scale(.99); }
+
+  .stat-label { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-value { font-family: var(--font-display); font-size: 30px; font-weight: 700; margin-bottom: 4px; }
+  .stat-delta { font-size: 13px; font-family: var(--font-mono); color: var(--accent); }
+
+  .product-card img, .blog-card .thumb, .course-card .thumb { display: none; }
+  .thumb-block { height: 120px; border-radius: var(--radius); background: var(--surface-2); margin-bottom: 14px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 12px; font-family: var(--font-mono); }
+  .card-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; font-family: var(--font-body); }
+  .card-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px; }
+  .price { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+
+  .tag { display: inline-block; font-size: 11px; font-family: var(--font-mono); padding: 4px 9px; border-radius: 999px; background: var(--surface-2); color: var(--text-muted); border: var(--border-w) solid var(--border); transition: border-color .15s ease, color .15s ease; }
+  body[data-mood="bold"] .tag { border-radius: 0; }
+  .tag-a, .tag-b, .tag-c { border: none; font-weight: 600; transition: opacity .15s ease; }
+  .tag-a { background: var(--accent); color: var(--accent-text); }
+  .tag-b { background: var(--secondary); color: var(--secondary-text); }
+  .tag-c { background: var(--tertiary); color: var(--tertiary-text); }
+  .tag-a:hover, .tag-b:hover, .tag-c:hover { opacity: .85; }
+
+  /* Nav mock */
+  .nav-mock { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: var(--border-w) solid var(--border); border-radius: var(--radius-lg); padding: 14px 20px; }
+  .nav-brand { font-family: var(--font-display); font-weight: 700; font-size: 18px; }
+  .nav-links { display: flex; gap: 22px; font-size: 14px; color: var(--text-muted); }
+  .nav-links span { cursor: pointer; transition: color .15s ease; }
+  .nav-links span:hover { color: var(--text); }
+  .nav-cta { background: var(--accent); color: var(--accent-text); font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: var(--radius); cursor: pointer; transition: opacity .15s ease, transform .1s ease; }
+  .nav-cta:hover { opacity: .88; }
+  .nav-cta:active { opacity: .78; transform: scale(.97); }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); font-weight: 500; padding: 10px 12px; border-bottom: var(--border-w) solid var(--border); }
+  td { padding: 12px; border-bottom: var(--border-w) solid var(--border); }
+
+  .token-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); background: var(--surface); border: var(--border-w) solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .token-list div span { color: var(--text); }
+
+  /* Accordion */
+  .accordion { background: var(--surface); border: var(--border-w) solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .accordion-item + .accordion-item { border-top: var(--border-w) solid var(--border); }
+  .accordion-trigger {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    background: transparent; border: none; text-align: left; cursor: pointer;
+    padding: 16px 20px; font-family: var(--font-body); font-size: 14px; font-weight: 600; color: var(--text);
+    transition: background-color .15s ease;
+  }
+  .accordion-trigger:hover { background: var(--surface-2); }
+  .accordion-chevron { flex-shrink: 0; width: 16px; height: 16px; transition: transform .2s ease; color: var(--text-muted); }
+  .accordion-item.open .accordion-chevron { transform: rotate(180deg); color: var(--accent); }
+  .accordion-panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .22s ease; }
+  .accordion-item.open .accordion-panel { grid-template-rows: 1fr; }
+  .accordion-panel-inner { overflow: hidden; }
+  .accordion-panel-content { padding: 0 20px 18px; font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+
+  /* Dropdown */
+  .dropdown { position: relative; display: inline-block; }
+  .dropdown-trigger {
+    display: flex; align-items: center; gap: 10px; font-family: var(--font-body); font-size: 14px; color: var(--text);
+    background: var(--surface); border: var(--border-w) solid var(--border); border-radius: var(--radius);
+    padding: 10px 14px; cursor: pointer; min-width: 190px; justify-content: space-between;
+    transition: border-color .15s ease, background-color .15s ease;
+  }
+  .dropdown-trigger:hover { border-color: var(--text-muted); }
+  .dropdown-trigger .chevron { width: 15px; height: 15px; color: var(--text-muted); flex-shrink: 0; transition: transform .2s ease; }
+  .dropdown.open .dropdown-trigger { border-color: var(--accent); }
+  .dropdown.open .chevron { transform: rotate(180deg); }
+  .dropdown-menu {
+    position: absolute; top: calc(100% + 6px); left: 0; min-width: 100%; z-index: 20;
+    background: var(--surface); border: var(--border-w) solid var(--border); border-radius: var(--radius);
+    box-shadow: 0 10px 28px -10px rgba(0,0,0,.28); padding: 6px; opacity: 0; transform: translateY(-6px) scale(.97);
+    pointer-events: none; transition: opacity .15s ease, transform .15s ease;
+  }
+  .dropdown.open .dropdown-menu { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+  .dropdown-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px;
+    border-radius: calc(var(--radius) - 2px); font-size: 13.5px; color: var(--text); cursor: pointer; white-space: nowrap;
+    transition: background-color .12s ease;
+  }
+  .dropdown-item:hover { background: var(--surface-2); }
+  .dropdown-item .check { width: 14px; height: 14px; color: var(--accent); opacity: 0; flex-shrink: 0; }
+  .dropdown-item.selected .check { opacity: 1; }
+  .dropdown-item.selected { color: var(--text); font-weight: 600; }
+
+  /* Multi-select checkbox variant */
+  .dropdown-item .checkbox {
+    width: 15px; height: 15px; border-radius: 4px; border: var(--border-w) solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; background: var(--surface); transition: background-color .12s ease, border-color .12s ease;
+  }
+  .dropdown-item.selected .checkbox { background: var(--accent); border-color: var(--accent); }
+  .dropdown-item .checkbox svg { width: 10px; height: 10px; color: var(--accent-text); opacity: 0; }
+  .dropdown-item.selected .checkbox svg { opacity: 1; }
+  .dropdown-footer { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px 2px; border-top: var(--border-w) solid var(--border); margin-top: 4px; }
+  .dropdown-footer button { background: none; border: none; cursor: pointer; font-size: 12px; font-family: var(--font-body); color: var(--accent); font-weight: 600; padding: 4px 6px; }
+
+  /* Searchable dropdown */
+  .dropdown-search-wrap { padding: 6px; border-bottom: var(--border-w) solid var(--border); }
+  .dropdown-search {
+    width: 100%; font-family: var(--font-body); font-size: 13.5px; padding: 8px 10px; border-radius: calc(var(--radius) - 2px);
+    border: var(--border-w) solid var(--border); background: var(--bg); color: var(--text);
+  }
+  .dropdown-search:focus { outline: none; border-color: var(--accent); }
+  .dropdown-list { max-height: 220px; overflow-y: auto; padding: 6px; }
+  .dropdown-empty { padding: 16px 10px; font-size: 13px; color: var(--text-muted); text-align: center; }
+
+  /* Sidebar */
+  .app-shell { display: flex; border: var(--border-w) solid var(--border); border-radius: var(--radius-lg); overflow: hidden; min-height: 360px; }
+  .sidebar { width: 210px; background: var(--surface); border-right: var(--border-w) solid var(--border); padding: 14px 10px; flex-shrink: 0; transition: width .2s ease; display: flex; flex-direction: column; }
+  .sidebar.collapsed { width: 60px; }
+  .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 6px 8px 16px; font-family: var(--font-display); font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; }
+  .sidebar-brand .dot { width: 20px; height: 20px; border-radius: 6px; background: var(--accent); flex-shrink: 0; }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+  .sidebar-link {
+    display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: var(--radius); font-size: 13.5px;
+    color: var(--text-muted); cursor: pointer; transition: background-color .12s ease, color .12s ease; white-space: nowrap; overflow: hidden;
+  }
+  .sidebar-link svg { width: 17px; height: 17px; flex-shrink: 0; }
+  .sidebar-link:hover { background: var(--surface-2); color: var(--text); }
+  .sidebar-link.active { background: var(--accent); color: var(--accent-text); }
+  .sidebar.collapsed .sidebar-link span, .sidebar.collapsed .sidebar-brand span { display: none; }
+  .sidebar-toggle {
+    display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--radius); font-size: 13px;
+    color: var(--text-muted); background: transparent; border: none; cursor: pointer; margin-top: 8px; border-top: var(--border-w) solid var(--border); padding-top: 14px;
+  }
+  .sidebar-toggle:hover { color: var(--text); }
+  .sidebar-toggle svg { width: 16px; height: 16px; flex-shrink: 0; transition: transform .2s ease; }
+  .sidebar.collapsed .sidebar-toggle svg { transform: rotate(180deg); }
+  .app-main { flex: 1; padding: 22px; background: var(--bg); }
+  .app-main h3 { font-family: var(--font-display); font-size: 16px; margin-bottom: 6px; }
+  .app-main p { font-size: 13.5px; color: var(--text-muted); margin: 0; }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(10,12,16,.55); display: flex; align-items: center; justify-content: center;
+    z-index: 100; opacity: 0; pointer-events: none; transition: opacity .18s ease; padding: 20px;
+  }
+  .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+  .modal {
+    background: var(--surface); border-radius: var(--radius-lg); border: var(--border-w) solid var(--border);
+    width: min(420px, 100%); padding: 22px; transform: scale(.95) translateY(8px); transition: transform .18s ease;
+    box-shadow: 0 24px 60px -12px rgba(0,0,0,.4);
+  }
+  .modal-backdrop.open .modal { transform: scale(1) translateY(0); }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .modal-title { font-family: var(--font-display); font-size: 17px; font-weight: 700; }
+  .modal-close {
+    background: transparent; border: none; cursor: pointer; color: var(--text-muted); width: 26px; height: 26px;
+    border-radius: var(--radius); display: flex; align-items: center; justify-content: center; transition: background-color .12s ease;
+  }
+  .modal-close:hover { background: var(--surface-2); color: var(--text); }
+  .modal-body { font-size: 13.5px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; }
+
+  /* Alerts */
+  .alert { display: flex; gap: 12px; padding: 13px 15px; border-radius: var(--radius); border: var(--border-w) solid; font-size: 13.5px; line-height: 1.5; margin-bottom: 10px; }
+  .alert svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+  .alert-title { font-weight: 600; margin-bottom: 2px; }
+  .alert-info { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); color: var(--text); }
+  .alert-info svg { color: var(--accent); }
+  .alert-success { background: color-mix(in srgb, var(--secondary) 8%, var(--surface)); border-color: color-mix(in srgb, var(--secondary) 30%, var(--border)); color: var(--text); }
+  .alert-success svg { color: var(--secondary); }
+  .alert-warning { background: color-mix(in srgb, var(--tertiary) 8%, var(--surface)); border-color: color-mix(in srgb, var(--tertiary) 30%, var(--border)); color: var(--text); }
+  .alert-warning svg { color: var(--tertiary); }
+
+  /* Toast */
+  .toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 200; }
+  .toast {
+    background: var(--surface); border: var(--border-w) solid var(--border); border-left: 4px solid var(--accent);
+    border-radius: var(--radius); box-shadow: 0 14px 34px -10px rgba(0,0,0,.35); padding: 13px 15px; min-width: 260px; max-width: 320px;
+    display: flex; gap: 10px; align-items: flex-start; transform: translateX(120%); opacity: 0; transition: transform .25s ease, opacity .25s ease;
+  }
+  .toast.show { transform: translateX(0); opacity: 1; }
+  .toast.success { border-left-color: var(--secondary); }
+  .toast.warning { border-left-color: var(--tertiary); }
+  .toast-title { font-size: 13.5px; font-weight: 600; margin-bottom: 2px; }
+  .toast-desc { font-size: 12px; color: var(--text-muted); }
+  .toast-close { margin-left: auto; background: transparent; border: none; cursor: pointer; color: var(--text-muted); flex-shrink: 0; }
+
+  /* Data table toolbar */
+  .table-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .table-search {
+    flex: 1; min-width: 180px; font-family: var(--font-body); font-size: 14px; padding: 10px 12px; border-radius: var(--radius);
+    border: var(--border-w) solid var(--border); background: var(--surface); color: var(--text); transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .table-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+  th.sortable { cursor: pointer; user-select: none; transition: color .12s ease; }
+  th.sortable:hover { color: var(--text); }
+  .sort-indicator { margin-left: 4px; font-size: 11px; }
+  .table-empty-row td { text-align: center; padding: 26px; color: var(--text-muted); }
+
+  /* Dashboard */
+  .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .dashboard-grid .span-2 { grid-column: span 2; }
+  .chart-title { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; font-family: var(--font-body); }
+  .chart-wrap { position: relative; height: 220px; }
+
+  .progress-row { margin-bottom: 14px; }
+  .progress-row:last-child { margin-bottom: 0; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 13px; color: var(--text); margin-bottom: 6px; }
+  .progress-track { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 999px; background: var(--accent); transition: width .4s ease; }
+
+  .activity-list { display: flex; flex-direction: column; gap: 14px; }
+  .activity-item { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--text); }
+  .activity-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .activity-time { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); margin-top: 2px; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+</head>
+<body data-mood="fusion" data-theme="light">
+
+  <div class="controls">
+    <div class="mood-tabs" id="moodTabs"></div>
+    <button class="theme-toggle" id="themeToggle">Switch to dark</button>
+  </div>
+
+  <div class="wrap">
+    <div class="intro">
+      <h1 id="moodTitle">Paper &amp; Pine</h1>
+      <p id="moodDesc"></p>
+    </div>
+
+    <section>
+      <div class="section-label">Color tokens</div>
+      <div class="swatches" id="swatches"></div>
+    </section>
+
+    <section>
+      <div class="section-label">Type scale</div>
+      <div class="type-row"><span class="type-tag">display</span><span class="type-sample display">Build something clear</span></div>
+      <div class="type-row"><span class="type-tag">h1 / 28px</span><span class="type-sample h1">Course dashboard</span></div>
+      <div class="type-row"><span class="type-tag">h2 / 21px</span><span class="type-sample h2">Weekly attendance</span></div>
+      <div class="type-row"><span class="type-tag">body / 16px</span><span class="type-sample body">Track spending across categories, compare against last month, and get alerts when a budget line runs over.</span></div>
+      <div class="type-row"><span class="type-tag">caption</span><span class="type-sample caption">Last synced 2 minutes ago</span></div>
+    </section>
+
+    <section>
+      <div class="section-label">Buttons &amp; badges</div>
+      <div class="row" style="margin-bottom: 14px;">
+        <button class="btn btn-primary">Save changes</button>
+        <button class="btn btn-secondary">Add to cart</button>
+        <button class="btn btn-ghost">Cancel</button>
+      </div>
+      <div class="row">
+        <span class="tag">In stock</span>
+        <span class="tag">Grade 9</span>
+        <span class="tag">Published</span>
+      </div>
+      <div class="row" style="margin-top: 10px;">
+        <span class="tag-a" style="border-radius: 999px; padding: 4px 9px; font-size: 11px; font-family: var(--font-mono);">New</span>
+        <span class="tag-b" style="border-radius: 999px; padding: 4px 9px; font-size: 11px; font-family: var(--font-mono);">Approved</span>
+        <span class="tag-c" style="border-radius: 999px; padding: 4px 9px; font-size: 11px; font-family: var(--font-mono);">Overdue</span>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Form</div>
+      <div class="form-grid">
+        <div class="field"><label>Full name</label><input type="text" placeholder="Asha Verma"></div>
+        <div class="field"><label>Class section</label><select><option>Section A</option><option>Section B</option></select></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Dropdown</div>
+      <div class="row">
+        <div class="dropdown" id="dropdownSort">
+          <button class="dropdown-trigger" data-dropdown-trigger>
+            <span data-dropdown-label>Sort: Newest</span>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="dropdown-menu">
+            <div class="dropdown-item selected" data-value="Sort: Newest"><span>Newest</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="dropdown-item" data-value="Sort: Price, low to high"><span>Price, low to high</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="dropdown-item" data-value="Sort: Price, high to low"><span>Price, high to low</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="dropdown-item" data-value="Sort: Most popular"><span>Most popular</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+          </div>
+        </div>
+        <div class="dropdown" id="dropdownStatus">
+          <button class="dropdown-trigger" data-dropdown-trigger>
+            <span data-dropdown-label>Status: All</span>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="dropdown-menu">
+            <div class="dropdown-item selected" data-value="Status: All"><span>All</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="dropdown-item" data-value="Status: Active"><span>Active</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="dropdown-item" data-value="Status: Flagged"><span>Flagged</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="dropdown-item" data-value="Status: Archived"><span>Archived</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Multi-select dropdown</div>
+      <div class="row">
+        <div class="dropdown" id="dropdownMulti" data-multi="true">
+          <button class="dropdown-trigger" data-dropdown-trigger>
+            <span data-dropdown-label>Select subjects</span>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="dropdown-menu">
+            <div class="dropdown-list" style="max-height:none; padding:6px;">
+              <div class="dropdown-item" data-value="Math"><span>Math</span><span class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></span></div>
+              <div class="dropdown-item" data-value="Science"><span>Science</span><span class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></span></div>
+              <div class="dropdown-item" data-value="English"><span>English</span><span class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></span></div>
+              <div class="dropdown-item" data-value="Art"><span>Art</span><span class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></span></div>
+              <div class="dropdown-item" data-value="Music"><span>Music</span><span class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></span></div>
+            </div>
+            <div class="dropdown-footer">
+              <button data-multi-clear>Clear</button>
+              <span class="mono" style="font-size:11px; color:var(--text-muted);" data-multi-count>0 selected</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Searchable dropdown</div>
+      <div class="row">
+        <div class="dropdown" id="dropdownSearch">
+          <button class="dropdown-trigger" data-dropdown-trigger>
+            <span data-dropdown-label>Select country</span>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="dropdown-menu">
+            <div class="dropdown-search-wrap"><input type="text" class="dropdown-search" placeholder="Search country…" data-search-input></div>
+            <div class="dropdown-list" data-search-list>
+              <div class="dropdown-item" data-value="India"><span>India</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+              <div class="dropdown-item" data-value="United States"><span>United States</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+              <div class="dropdown-item" data-value="United Kingdom"><span>United Kingdom</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+              <div class="dropdown-item" data-value="Germany"><span>Germany</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+              <div class="dropdown-item" data-value="France"><span>France</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+              <div class="dropdown-item" data-value="Japan"><span>Japan</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+              <div class="dropdown-item" data-value="Australia"><span>Australia</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+              <div class="dropdown-item" data-value="Canada"><span>Canada</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+              <div class="dropdown-item" data-value="Brazil"><span>Brazil</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+              <div class="dropdown-item" data-value="South Africa"><span>South Africa</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            </div>
+            <div class="dropdown-empty" data-search-empty style="display:none;">No results found</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Sidebar</div>
+      <div class="app-shell">
+        <div class="sidebar" id="sidebar">
+          <div class="sidebar-brand"><span class="dot"></span><span>Brightpath</span></div>
+          <div class="sidebar-nav">
+            <div class="sidebar-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>Dashboard</span></div>
+            <div class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M2 20c0-3.5 3-6 7-6s7 2.5 7 6"/><circle cx="17" cy="8" r="2.3"/><path d="M17 12.2c2.6.4 4.5 2.3 5 4.8"/></svg><span>Students</span></div>
+            <div class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.6 12.4a2 2 0 0 0 2 1.6h8a2 2 0 0 0 2-1.6L21 7H6"/></svg><span>Orders</span></div>
+            <div class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="12" width="3.5" height="8"/><rect x="10.3" y="7" width="3.5" height="13"/><rect x="16.5" y="3" width="3.5" height="17"/></svg><span>Reports</span></div>
+            <div class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></div>
+          </div>
+          <button class="sidebar-toggle" id="sidebarToggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg><span>Collapse</span></button>
+        </div>
+        <div class="app-main">
+          <h3>Dashboard</h3>
+          <p>This is the content pane next to the sidebar — click a nav item to see the active state, or hit collapse to shrink it to icons only.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Alerts</div>
+      <div class="alert alert-info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div><div class="alert-title">Scheduled maintenance</div>The platform will be briefly unavailable Sunday 2–3 AM while we roll out updates.</div>
+      </div>
+      <div class="alert alert-success">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <div><div class="alert-title">Payout sent</div>$2,140.00 was deposited to your linked bank account.</div>
+      </div>
+      <div class="alert alert-warning">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div><div class="alert-title">3 students below 80% attendance</div>Review flagged students before Friday's report goes out.</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Modal</div>
+      <div class="row">
+        <button class="btn btn-primary" id="openModal">Delete order</button>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Toast</div>
+      <div class="row">
+        <button class="btn btn-secondary" data-toast="success" data-toast-title="Changes saved" data-toast-desc="Your profile was updated successfully.">Trigger success</button>
+        <button class="btn btn-ghost" data-toast="warning" data-toast-title="Low stock" data-toast-desc="Only 3 units of this item remain.">Trigger warning</button>
+        <button class="btn btn-ghost" data-toast="info" data-toast-title="New comment" data-toast-desc="Priya replied to your review request.">Trigger info</button>
+      </div>
+    </section>
+      <div class="nav-mock">
+        <div class="nav-brand">Brightpath</div>
+        <div class="nav-links"><span>Courses</span><span>Store</span><span>Journal</span><span>Account</span></div>
+        <div class="nav-cta">Sign in</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Components across contexts</div>
+      <div class="cards-grid">
+        <div class="card">
+          <div class="stat-label">Monthly revenue</div>
+          <div class="stat-value">$48,210</div>
+          <div class="stat-delta" style="color: var(--secondary);">+12.4% vs last month</div>
+        </div>
+        <div class="card">
+          <div class="stat-label">Refund rate</div>
+          <div class="stat-value">4.8%</div>
+          <div class="stat-delta" style="color: var(--tertiary);">+1.1 pts, worth a look</div>
+        </div>
+        <div class="card product-card interactive">
+          <div class="thumb-block">product photo</div>
+          <div class="card-title">Ceramic pour-over set</div>
+          <div class="card-desc">Hand-glazed stoneware, holds two cups.</div>
+          <div class="price">$38.00</div>
+        </div>
+        <div class="card blog-card interactive">
+          <div class="thumb-block">cover image</div>
+          <span class="tag" style="margin-bottom:10px; display:inline-block;">Essay</span>
+          <div class="card-title">What I learned building alone for a year</div>
+          <div class="card-desc">Six months in, the hardest part wasn't the code.</div>
+        </div>
+        <div class="card course-card interactive">
+          <div class="thumb-block">course cover</div>
+          <div class="card-title">Algebra II — Unit 4</div>
+          <div class="card-desc">Quadratic functions and their graphs.</div>
+          <span class="tag">14 lessons</span>
+        </div>
+        <div class="card">
+          <div class="card-title">New admission request</div>
+          <div class="card-desc">Rohan Mehta applied for Grade 6, section B. Review documents before approving.</div>
+          <div class="row"><button class="btn btn-primary" style="padding:8px 14px; font-size:13px;">Approve</button><button class="btn btn-ghost" style="padding:8px 14px; font-size:13px;">Review</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Dashboard — charts &amp; utilities</div>
+      <div class="cards-grid" style="margin-bottom:16px;">
+        <div class="card">
+          <div class="stat-label">Total revenue</div>
+          <div class="stat-value">$128,430</div>
+          <div class="stat-delta" style="color: var(--secondary);">+12.4% vs last month</div>
+        </div>
+        <div class="card">
+          <div class="stat-label">Orders</div>
+          <div class="stat-value">1,204</div>
+          <div class="stat-delta" style="color: var(--secondary);">+8.1% vs last month</div>
+        </div>
+        <div class="card">
+          <div class="stat-label">Active users</div>
+          <div class="stat-value">3,842</div>
+          <div class="stat-delta" style="color: var(--tertiary);">−2.3% vs last month</div>
+        </div>
+        <div class="card">
+          <div class="stat-label">Conversion rate</div>
+          <div class="stat-value">4.6%</div>
+          <div class="stat-delta" style="color: var(--secondary);">+0.4 pts vs last month</div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="card chart-card span-2">
+          <div class="chart-title">Revenue, last 7 months</div>
+          <div class="chart-wrap"><canvas id="revenueChart"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <div class="chart-title">Orders by status</div>
+          <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <div class="chart-title">Orders by category</div>
+          <div class="chart-wrap"><canvas id="ordersChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="chart-title">Course completion</div>
+          <div class="progress-row"><div class="progress-label"><span>Algebra II</span><span>82%</span></div><div class="progress-track"><div class="progress-fill" style="width:82%;"></div></div></div>
+          <div class="progress-row"><div class="progress-label"><span>Biology</span><span>64%</span></div><div class="progress-track"><div class="progress-fill" style="width:64%; background:var(--secondary);"></div></div></div>
+          <div class="progress-row"><div class="progress-label"><span>World History</span><span>41%</span></div><div class="progress-track"><div class="progress-fill" style="width:41%; background:var(--tertiary);"></div></div></div>
+        </div>
+        <div class="card">
+          <div class="chart-title">Recent activity</div>
+          <div class="activity-list">
+            <div class="activity-item"><span class="activity-dot" style="background:var(--secondary);"></span><div><div>New order <span class="mono">#1043</span> placed by Sara Fernandes</div><div class="activity-time">2 minutes ago</div></div></div>
+            <div class="activity-item"><span class="activity-dot" style="background:var(--tertiary);"></span><div><div>Refund issued for order <span class="mono">#1039</span></div><div class="activity-time">1 hour ago</div></div></div>
+            <div class="activity-item"><span class="activity-dot" style="background:var(--accent);"></span><div><div>Weekly report generated</div><div class="activity-time">3 hours ago</div></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Data table — search, filter, sort</div>
+      <div class="table-toolbar">
+        <input type="text" class="table-search" placeholder="Search customer or order ID…" id="tableSearch">
+        <div class="dropdown" id="dropdownTableStatus">
+          <button class="dropdown-trigger" data-dropdown-trigger style="min-width:150px;">
+            <span data-dropdown-label>Status: All</span>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="dropdown-menu">
+            <div class="dropdown-item selected" data-value="All"><span>All</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="dropdown-item" data-value="Paid"><span>Paid</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="dropdown-item" data-value="Pending"><span>Pending</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="dropdown-item" data-value="Refunded"><span>Refunded</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="padding:0; overflow:hidden;">
+        <table>
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="id">Order</th>
+              <th class="sortable" data-sort="customer">Customer<span class="sort-indicator" data-arrow="customer"></span></th>
+              <th class="sortable" data-sort="amount">Amount<span class="sort-indicator" data-arrow="amount"></span></th>
+              <th>Status</th>
+              <th class="sortable" data-sort="date">Date<span class="sort-indicator" data-arrow="date"></span></th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Accordion</div>
+      <div class="accordion" id="accordion">
+        <div class="accordion-item open">
+          <button class="accordion-trigger" data-target="0">
+            <span>How does grading work this term?</span>
+            <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="accordion-panel"><div class="accordion-panel-inner"><div class="accordion-panel-content">Assignments are weighted 40%, midterm 25%, final 35%. Late work loses 10% per day unless an extension was approved in advance.</div></div></div>
+        </div>
+        <div class="accordion-item">
+          <button class="accordion-trigger" data-target="1">
+            <span>What's your return policy?</span>
+            <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="accordion-panel"><div class="accordion-panel-inner"><div class="accordion-panel-content">Unused items can be returned within 30 days with the original receipt. Refunds are issued to the original payment method within 5–7 business days.</div></div></div>
+        </div>
+        <div class="accordion-item">
+          <button class="accordion-trigger" data-target="2">
+            <span>Can I export my data?</span>
+            <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="accordion-panel"><div class="accordion-panel-inner"><div class="accordion-panel-content">Yes — go to Settings → Data, then choose CSV or JSON. Larger exports are emailed to you as a download link once ready.</div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Raw tokens for this view</div>
+      <div class="token-list" id="tokenList"></div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Delete this order?</div>
+        <button class="modal-close" id="modalClose">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">This will permanently remove order #1042 and its refund history. This can't be undone.</div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="modalCancel">Cancel</button>
+        <button class="btn btn-primary" id="modalConfirm">Delete order</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+<script>
+  const moods = {
+    minimal: {
+      label: 'Paper & Pine',
+      desc: 'Quiet, editorial, restrained. A serif display against a warm off-white, deep pine as the single accent. Good fit if the product needs to feel trustworthy and get out of the way — school records, finance, long-form reading.',
+      tokens: ['--bg','--surface','--text','--accent','--secondary','--border']
+    },
+    bold: {
+      label: 'Electric',
+      desc: 'Hard edges, zero border-radius, thick 2px borders instead of shadows, one geometric sans everywhere. Violet and orange collide on purpose. Good fit for a product that wants to feel confident and a little loud — youth-facing apps, launches, marketing.',
+      tokens: ['--bg','--surface','--text','--accent','--secondary','--border']
+    },
+    warm: {
+      label: 'Sienna & Teal',
+      desc: 'A slab serif for headings, rounded corners, burnt sienna paired with an unexpected deep teal instead of the usual cream-and-terracotta combo. Good fit for something that wants to feel handmade and approachable — a blog, a small shop, a classroom tool.',
+      tokens: ['--bg','--surface','--text','--accent','--secondary','--border']
+    },
+    techy: {
+      label: 'Signal',
+      desc: 'Cool graphite and near-white paired with cyan and violet, monospace for data labels, 2px sharp corners. Good fit for dashboards and anything data-dense — admin panels, analytics, system status.',
+      tokens: ['--bg','--surface','--text','--accent','--secondary','--border']
+    },
+    fusion: {
+      label: 'Fusion',
+      desc: 'The two modes are deliberately different personalities. Dark mode settles into teal and pine — calm, focused, easy on the eyes for long sessions. Light mode uses navy, emerald and olive instead of bright primaries — the same blue / green / red logic as before, with more depth and less punch. Works well for a product people use daily and should recognize at a glance.',
+      tokens: ['--bg','--surface','--text','--accent','--secondary','--tertiary','--border']
+    }
+  };
+
+  const body = document.body;
+  const moodTabs = document.getElementById('moodTabs');
+  const themeToggle = document.getElementById('themeToggle');
+  const moodTitle = document.getElementById('moodTitle');
+  const moodDesc = document.getElementById('moodDesc');
+  const swatches = document.getElementById('swatches');
+  const tokenList = document.getElementById('tokenList');
+
+  Object.keys(moods).forEach(key => {
+    const b = document.createElement('button');
+    b.className = 'mood-tab';
+    b.textContent = moods[key].label;
+    b.onclick = () => setMood(key);
+    b.dataset.key = key;
+    moodTabs.appendChild(b);
+  });
+
+  function setMood(key) {
+    body.dataset.mood = key;
+    moodTitle.textContent = moods[key].label;
+    moodDesc.textContent = moods[key].desc;
+    [...moodTabs.children].forEach(b => b.classList.toggle('active', b.dataset.key === key));
+    renderSwatches();
+    buildCharts();
+  }
+
+  function setTheme(theme) {
+    body.dataset.theme = theme;
+    themeToggle.textContent = theme === 'light' ? 'Switch to dark' : 'Switch to light';
+    renderSwatches();
+    buildCharts();
+  }
+
+  function renderSwatches() {
+    const style = getComputedStyle(body);
+    const names = ['--bg','--surface','--text','--text-muted','--accent','--secondary','--tertiary','--border'];
+    swatches.innerHTML = '';
+    tokenList.innerHTML = '';
+    names.forEach(n => {
+      const val = style.getPropertyValue(n).trim();
+      const sw = document.createElement('div');
+      sw.className = 'swatch';
+      sw.innerHTML = `<div class="swatch-color" style="background:${val}"></div><div class="swatch-label">${n}</div>`;
+      swatches.appendChild(sw);
+      const t = document.createElement('div');
+      t.innerHTML = `${n}: <span>${val}</span>`;
+      tokenList.appendChild(t);
+    });
+  }
+
+  themeToggle.onclick = () => setTheme(body.dataset.theme === 'light' ? 'dark' : 'light');
+
+  document.querySelectorAll('.accordion-trigger').forEach(trigger => {
+    trigger.addEventListener('click', () => {
+      const item = trigger.closest('.accordion-item');
+      const isOpen = item.classList.contains('open');
+      item.parentElement.querySelectorAll('.accordion-item').forEach(i => i.classList.remove('open'));
+      if (!isOpen) item.classList.add('open');
+    });
+  });
+
+  document.querySelectorAll('.dropdown').forEach(dd => {
+    const trigger = dd.querySelector('[data-dropdown-trigger]');
+    const label = dd.querySelector('[data-dropdown-label]');
+    const isMulti = dd.dataset.multi === 'true';
+    const searchInput = dd.querySelector('[data-search-input]');
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const willOpen = !dd.classList.contains('open');
+      document.querySelectorAll('.dropdown.open').forEach(o => o.classList.remove('open'));
+      if (willOpen) {
+        dd.classList.add('open');
+        if (searchInput) { searchInput.value = ''; filterSearchDropdown(dd); setTimeout(() => searchInput.focus(), 50); }
+      }
+    });
+
+    if (isMulti) {
+      const countEl = dd.querySelector('[data-multi-count]');
+      const clearBtn = dd.querySelector('[data-multi-clear]');
+      const updateMultiLabel = () => {
+        const selected = [...dd.querySelectorAll('.dropdown-item.selected')].map(i => i.dataset.value);
+        countEl.textContent = selected.length + ' selected';
+        label.textContent = selected.length === 0 ? 'Select subjects' : selected.length <= 2 ? selected.join(', ') : selected.length + ' subjects';
+      };
+      dd.querySelectorAll('.dropdown-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          item.classList.toggle('selected');
+          updateMultiLabel();
+        });
+      });
+      clearBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dd.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('selected'));
+        updateMultiLabel();
+      });
+    } else {
+      dd.querySelectorAll('.dropdown-item').forEach(item => {
+        item.addEventListener('click', () => {
+          dd.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('selected'));
+          item.classList.add('selected');
+          label.textContent = item.dataset.value;
+          dd.classList.remove('open');
+          if (dd.id === 'dropdownTableStatus') { tableState.status = item.dataset.value; renderTable(); }
+        });
+      });
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener('input', () => filterSearchDropdown(dd));
+      searchInput.addEventListener('click', e => e.stopPropagation());
+    }
+  });
+
+  function filterSearchDropdown(dd) {
+    const input = dd.querySelector('[data-search-input]');
+    const empty = dd.querySelector('[data-search-empty]');
+    const q = input.value.trim().toLowerCase();
+    let anyVisible = false;
+    dd.querySelectorAll('.dropdown-item').forEach(item => {
+      const match = item.dataset.value.toLowerCase().includes(q);
+      item.style.display = match ? '' : 'none';
+      if (match) anyVisible = true;
+    });
+    empty.style.display = anyVisible ? 'none' : 'block';
+  }
+
+  document.addEventListener('click', () => document.querySelectorAll('.dropdown.open').forEach(o => o.classList.remove('open')));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.dropdown.open').forEach(o => o.classList.remove('open')); });
+
+  /* Sidebar */
+  document.querySelectorAll('.sidebar-link').forEach(link => {
+    link.addEventListener('click', () => {
+      document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+      link.classList.add('active');
+    });
+  });
+  document.getElementById('sidebarToggle').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  });
+
+  /* Modal */
+  const modalBackdrop = document.getElementById('modalBackdrop');
+  const openModalBtn = document.getElementById('openModal');
+  const closeModal = () => modalBackdrop.classList.remove('open');
+  openModalBtn.addEventListener('click', () => modalBackdrop.classList.add('open'));
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  document.getElementById('modalConfirm').addEventListener('click', () => {
+    closeModal();
+    spawnToast('warning', 'Order deleted', 'Order #1042 was permanently removed.');
+  });
+  modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+  /* Toast */
+  const toastContainer = document.getElementById('toastContainer');
+  function spawnToast(type, title, desc) {
+    const el = document.createElement('div');
+    el.className = 'toast ' + (type === 'success' ? 'success' : type === 'warning' ? 'warning' : '');
+    el.innerHTML = `<div><div class="toast-title">${title}</div><div class="toast-desc">${desc}</div></div><button class="toast-close" aria-label="Dismiss">&times;</button>`;
+    toastContainer.appendChild(el);
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
+    const remove = () => { el.classList.remove('show'); setTimeout(() => el.remove(), 250); };
+    el.querySelector('.toast-close').addEventListener('click', remove);
+    setTimeout(remove, 4000);
+  }
+  document.querySelectorAll('[data-toast]').forEach(btn => {
+    btn.addEventListener('click', () => spawnToast(btn.dataset.toast, btn.dataset.toastTitle, btn.dataset.toastDesc));
+  });
+
+  /* Data table */
+  const tableData = [
+    { id: '#1042', customer: 'Priya Nair', amount: 128.50, status: 'Paid', date: '2026-08-02' },
+    { id: '#1041', customer: 'Kabir Shah', amount: 64.00, status: 'Pending', date: '2026-08-01' },
+    { id: '#1040', customer: 'Meera Iyer', amount: 212.99, status: 'Paid', date: '2026-07-30' },
+    { id: '#1039', customer: 'Rohan Mehta', amount: 39.99, status: 'Refunded', date: '2026-07-29' },
+    { id: '#1038', customer: 'Asha Verma', amount: 156.20, status: 'Paid', date: '2026-07-27' },
+    { id: '#1037', customer: 'Vikram Rao', amount: 88.00, status: 'Pending', date: '2026-07-25' },
+    { id: '#1036', customer: 'Sara Fernandes', amount: 302.10, status: 'Paid', date: '2026-07-22' },
+    { id: '#1035', customer: 'Aditya Kulkarni', amount: 47.50, status: 'Refunded', date: '2026-07-20' },
+  ];
+  const tableState = { search: '', status: 'All', sortKey: null, sortDir: 1 };
+  const tagClass = { Paid: 'tag-b', Pending: 'tag-c', Refunded: 'tag-a' };
+
+  function renderTable() {
+    let rows = tableData.filter(r => {
+      const matchesSearch = (r.customer + ' ' + r.id).toLowerCase().includes(tableState.search.toLowerCase());
+      const matchesStatus = tableState.status === 'All' || r.status === tableState.status;
+      return matchesSearch && matchesStatus;
+    });
+    if (tableState.sortKey) {
+      rows = rows.slice().sort((a, b) => {
+        const k = tableState.sortKey;
+        if (k === 'amount') return (a[k] - b[k]) * tableState.sortDir;
+        return String(a[k]).localeCompare(String(b[k])) * tableState.sortDir;
+      });
+    }
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = rows.length ? rows.map(r => `
+      <tr>
+        <td class="mono">${r.id}</td>
+        <td>${r.customer}</td>
+        <td>$${r.amount.toFixed(2)}</td>
+        <td><span class="${tagClass[r.status]}" style="border-radius:999px; padding:4px 9px; font-size:11px; font-family:var(--font-mono);">${r.status}</span></td>
+        <td class="mono">${r.date}</td>
+      </tr>`).join('') : `<tr class="table-empty-row"><td colspan="5">No orders match your search.</td></tr>`;
+
+    document.querySelectorAll('.sort-indicator').forEach(el => el.textContent = '');
+    if (tableState.sortKey) {
+      const arrow = document.querySelector(`[data-arrow="${tableState.sortKey}"]`);
+      if (arrow) arrow.textContent = tableState.sortDir === 1 ? '↑' : '↓';
+    }
+  }
+  document.getElementById('tableSearch').addEventListener('input', (e) => { tableState.search = e.target.value; renderTable(); });
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sort;
+      if (tableState.sortKey === key) tableState.sortDir *= -1; else { tableState.sortKey = key; tableState.sortDir = 1; }
+      renderTable();
+    });
+  });
+  renderTable();
+
+  /* Charts */
+  function tokenColor(name) { return getComputedStyle(body).getPropertyValue(name).trim(); }
+  function hexToRgba(hex, alpha) {
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const r = parseInt(hex.substring(0, 2), 16), g = parseInt(hex.substring(2, 4), 16), b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  let revenueChart, statusChart, ordersChart;
+  function buildCharts() {
+    if (typeof Chart === 'undefined') return;
+    const accent = tokenColor('--accent'), secondary = tokenColor('--secondary'), tertiary = tokenColor('--tertiary');
+    const textMuted = tokenColor('--text-muted'), border = tokenColor('--border');
+    const fontFamily = tokenColor('--font-body').replace(/['"]/g, '') || 'sans-serif';
+    Chart.defaults.font.family = fontFamily;
+    Chart.defaults.color = textMuted;
+
+    if (revenueChart) revenueChart.destroy();
+    revenueChart = new Chart(document.getElementById('revenueChart'), {
+      type: 'line',
+      data: {
+        labels: ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+        datasets: [{ data: [22, 28, 25, 34, 30, 41, 48], borderColor: accent, backgroundColor: hexToRgba(accent, 0.15), fill: true, tension: .4, pointRadius: 0, borderWidth: 2.5 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { x: { grid: { display: false }, ticks: { color: textMuted } }, y: { grid: { color: border }, ticks: { color: textMuted, callback: v => '$' + v + 'k' } } }
+      }
+    });
+
+    if (statusChart) statusChart.destroy();
+    statusChart = new Chart(document.getElementById('statusChart'), {
+      type: 'doughnut',
+      data: { labels: ['Paid', 'Pending', 'Refunded'], datasets: [{ data: [62, 23, 15], backgroundColor: [secondary, tertiary, accent], borderWidth: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { position: 'bottom', labels: { color: textMuted, boxWidth: 10, padding: 14, font: { size: 11 } } } } }
+    });
+
+    if (ordersChart) ordersChart.destroy();
+    ordersChart = new Chart(document.getElementById('ordersChart'), {
+      type: 'bar',
+      data: { labels: ['Electronics', 'Home', 'Books', 'Apparel', 'Toys'], datasets: [{ data: [320, 210, 145, 265, 98], backgroundColor: accent, borderRadius: 6, maxBarThickness: 28 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { x: { grid: { display: false }, ticks: { color: textMuted } }, y: { grid: { color: border }, ticks: { color: textMuted } } }
+      }
+    });
+  }
+
+  setMood('fusion');
+  setTheme('light');
+</script>
+</body>
+</html>

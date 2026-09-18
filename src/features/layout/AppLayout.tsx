@@ -1,5 +1,5 @@
 import { Plus } from 'lucide-react'
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { Link, NavLink, Outlet } from 'react-router'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
@@ -93,7 +93,10 @@ export function AppLayout() {
             </div>
           </header>
           <main className={cn(CONTENT_WIDTH, 'flex-1 p-4', !isDesktop && 'pb-24')}>
-            <Outlet />
+            {/* Pages load on demand (see App.tsx); the header and nav stay put while one arrives */}
+            <Suspense fallback={<p role="status" className="text-muted-foreground">Loading…</p>}>
+              <Outlet />
+            </Suspense>
           </main>
         </div>
       </div>

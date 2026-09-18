@@ -25,13 +25,14 @@ export const BOOK_COLUMNS = {
   addedAt: 'Added at',
   categories: 'Categories',
   language: 'Language',
+  archived: 'Active',
 } as const satisfies Record<keyof Book, string>
 
 /**
  * Columns an older Sheet may not have yet. A missing one reads as empty and the app says how to add it; only
  * *writing* a value to a missing column is an error (it would otherwise be lost silently).
  */
-export const OPTIONAL_BOOK_FIELDS = ['categories', 'language'] as const satisfies readonly (keyof typeof BOOK_COLUMNS)[]
+export const OPTIONAL_BOOK_FIELDS = ['categories', 'language', 'archived'] as const satisfies readonly (keyof typeof BOOK_COLUMNS)[]
 
 export const OPTION_COLUMNS = { name: 'Name', active: 'Active' } as const satisfies Record<keyof ListOption, string>
 export type OptionField = keyof typeof OPTION_COLUMNS
@@ -115,6 +116,9 @@ export function parseNameList(text: string): string[] {
 
 export const joinNameList = (names: readonly string[]): string => parseNameList(names.join(',')).join(', ')
 
+/** A row is active unless its Active cell says No: hand-typed rows without the cell count as active. */
+const isNo = (s: string) => /^(no|n|false)$/i.test(s)
+
 export function parseBooks(values: readonly (readonly unknown[])[] | undefined): Table<Book, BookField> {
   const [header, ...body] = values ?? []
   const { columns, width } = resolveColumns<BookField>(BOOKS_TAB, header as string[] | undefined, BOOK_COLUMNS, OPTIONAL_BOOK_FIELDS)
@@ -136,14 +140,12 @@ export function parseBooks(values: readonly (readonly unknown[])[] | undefined):
         addedAt: optional(cell(row, columns.addedAt)),
         categories: categories.length > 0 ? categories : undefined,
         language: optional(cell(row, columns.language)),
+        archived: isNo(cell(row, columns.archived)) || undefined,
       },
     })
   })
   return { columns, width, rows }
 }
-
-/** A row is active unless its Active cell says No: hand-typed rows without the cell count as active. */
-const isNo = (s: string) => /^(no|n|false)$/i.test(s)
 
 export function parseOptions(tab: string, values: readonly (readonly unknown[])[] | undefined): Table<ListOption, OptionField> {
   const [header, ...body] = values ?? []
@@ -252,6 +254,7 @@ export function bookCells(book: Book): Record<BookField, Cell> {
     addedAt: book.addedAt ? forceText(book.addedAt) : '',
     categories: book.categories?.length ? escapeText(joinNameList(book.categories)) : '',
     language: str(book.language),
+    archived: book.archived ? 'No' : '',
   }
 }
 

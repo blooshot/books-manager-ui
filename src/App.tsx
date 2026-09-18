@@ -1,15 +1,11 @@
 import { Link, Route, Routes } from 'react-router'
+import { AddBookPage, BookDetailPage, EditBookPage, LentOutPage, ManageOptionsPage, PendingChangesPage } from '@/pages'
 import { LoginRoute } from '@/features/auth/LoginRoute'
 import { RequireSession } from '@/features/auth/RequireSession'
 import { useTokenExpiry } from '@/features/auth/useTokenExpiry'
-import { BookDetailPage } from '@/features/books/BookDetailPage'
-import { AddBookPage, EditBookPage } from '@/features/books/BookFormPage'
 import { BookListPage } from '@/features/books/BookListPage'
-import { ManageOptionsPage } from '@/features/categories/ManageOptionsPage'
 import { CoverProvider } from '@/features/covers/CoverProvider'
 import { AppLayout } from '@/features/layout/AppLayout'
-import { LentOutPage } from '@/features/loans/LentOutPage'
-import { PendingChangesPage } from '@/features/sync/PendingChangesPage'
 
 function NotFoundPage() {
   return (
