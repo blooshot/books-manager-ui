@@ -1,5 +1,9 @@
 # Project Context
 
+## Canonical sources (these win over anything in this folder)
+
+-   [`AGENTS.md`](../AGENTS.md), [`docs/adr/`](../docs/adr/), [`docs/STATUS.md`](../docs/STATUS.md)
+
 ## Definition
 
 -   [Product Definition](./product.md)
@@ -9,7 +13,13 @@
 ## Workflow
 
 -   [Workflow](./workflow.md)
--   [Code Style Guides](./code_styleguides/)
+-   [Lessons Learned](./lessons-learned.md)
+-   Code Style Guides (read all before any task):
+    -   [TypeScript / React](./code_styleguides/typescript.md)
+    -   [Testing](./code_styleguides/testing.md)
+    -   [Google APIs (Sheets, Drive)](./code_styleguides/google-apis.md)
+    -   [General](./code_styleguides/general.md)
+    -   [HTML / CSS](./code_styleguides/html-css.md)
 
 ## Capabilities
 

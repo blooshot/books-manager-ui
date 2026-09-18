@@ -24,3 +24,23 @@
   - [x] Write tests for storing/retrieving full image and thumbnail Blobs by file ID
   - [x] Implement IndexedDB storage logic
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 5feed1d]
+
+## Post-review corrections (Claude Code, 2026-09-19)
+
+Cross-review found problems in this track that its tests did not catch. They were fixed outside a track; the tasks above
+are marked complete but were **not** complete when first marked. Root causes and the rules that now prevent them are in
+`conductor/lessons-learned.md`.
+
+- `npm run verify` was red (unused import). Fixed.
+- Cache stored one blob and its tests never called it; spec required full image + ~240px thumbnail. Rewrote the cache
+  (`ArrayBuffer` + type, full and thumb variants, never throws) with real tests. Added `resizeToJpeg` / `createCoverVariants`.
+- Drive client sent JSON without `Content-Type: application/json`. Fixed in the client.
+- `uploadCover` used `FormData` (`multipart/form-data`); Drive needs `multipart/related`. Added `multipart.ts`.
+- Drive defined its own `SessionExpiredError`. Now one shared `GoogleApiError` / `SessionExpiredError`.
+- Folder ID: raw `localStorage`, global, never revalidated. Now `createFolderResolver` (per account, checked once per session,
+  recovers from deleted/trashed folders, concurrent callers share one lookup).
+- Guard did not cover `trashed: true`, `/trash`, or Drive methods. Added patterns, a Drive method allow-list, PATCH-only-rename check.
+- Link parser fallback matched any long string. Now strict about host and shape.
+- Still open from this track's spec: wiring into `libraryThunks` (out of scope of this track), and everything here has only run
+  against `FakeDrive`, never real Google Drive.
+

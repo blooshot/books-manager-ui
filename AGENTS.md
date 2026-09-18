@@ -211,6 +211,8 @@ The **repo is the only shared memory** — nothing that matters lives only in a 
 - **Cross-review:** work started in one tool is reviewed by the other before the
   next step (e.g. `/code-review` in Claude Code; `/conductor:conductor-review`
   in Conductor). Review against this file and the ADRs.
+- **Coding rules for every tool** are in `conductor/code_styleguides/` (TypeScript, testing, Google APIs) and
+  `conductor/lessons-learned.md`. This file and the ADRs win if they disagree.
 - **Never silently:** delete files, skip or weaken tests (including
   `src/test/no-delete.test.ts`), or put secrets/tokens in storage or the repo.
 

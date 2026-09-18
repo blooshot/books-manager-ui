@@ -4,7 +4,7 @@
 > The primary sources of truth for this project are `AGENTS.md`, `docs/adr/`, and `docs/STATUS.md`. This document serves as a high-level summary and defers to those files for technical and architectural details.
 
 ## Vision
-A web-based library management system built with React, Vite, Tailwind CSS, and Redux. It uses Google Sheets as a strict schema backend to manage books and borrowers, featuring sign-in via Google, Google Drive integration for book cover photos, and offline-first syncing capabilities.
+A web-based library management system built with React, Vite, Tailwind CSS, and Redux. It uses Google Sheets as a strict schema backend to manage books and borrowers, featuring sign-in via Google and Google Drive integration for book cover photos. Writes go straight to the Sheet; a failed write (expired token, no network) is kept in a persisted outbox and flushed by a Sync button (ADR-0006). It is **not** an offline-first app (ADR-0002).
 
 ## Target Audience
 Designed for a single librarian managing the entire catalog and loan process.
@@ -12,7 +12,7 @@ Designed for a single librarian managing the entire catalog and loan process.
 ## Core Features
 - Book catalog management (add, edit, and cover photo integration via Google Drive).
 - Loan management (borrowing and returning books).
-- Offline support via a sync outbox mechanism to handle Google API latency and offline states.
+- A sync outbox that keeps writes which failed (expired token, network error) and retries them on Sync (ADR-0006).
 
 ## Constraints & Architecture
 The project strictly adheres to the following hard constraints (refer to `AGENTS.md` and Architecture Decision Records in `docs/adr/` for detailed context):

@@ -1,73 +1,79 @@
-# Google TypeScript Style Guide Summary
+# TypeScript / React Style Guide (this project)
 
-This document summarizes key rules and best practices from the Google TypeScript
-Style Guide, which is enforced by the `gts` tool.
+Replaces the Google `gts` guide that was here before. That guide required semicolons and
+named exports only; this codebase uses neither, nothing enforced the guide, and following it
+would have produced code that clashes with everything around it. **Match the code that exists.**
 
-## 1. Language Features
+Precedence: `AGENTS.md` and `docs/adr/` > this file > everything else. Read
+[testing.md](./testing.md) and [google-apis.md](./google-apis.md) as well; they are part of the style.
 
--   **Variable Declarations:** Always use `const` or `let`. **`var` is
-    forbidden.** Use `const` by default.
--   **Modules:** Use ES6 modules (`import`/`export`). **Do not use
-    `namespace`.**
--   **Exports:** Use named exports (`export {MyClass};`). **Do not use default
-    exports.**
--   **Classes:**
-    -   **Do not use `#private` fields.** Use TypeScript's `private` visibility
-        modifier.
-    -   Mark properties never reassigned outside the constructor with
-        `readonly`.
-    -   **Never use the `public` modifier** (it's the default). Restrict
-        visibility with `private` or `protected` where possible.
--   **Functions:** Prefer function declarations for named functions. Use arrow
-    functions for anonymous functions/callbacks.
--   **String Literals:** Use single quotes (`'`). Use template literals (`` `
-    ``) for interpolation and multi-line strings.
--   **Equality Checks:** Always use triple equals (`===`) and not equals
-    (`!==`).
--   **Type Assertions:** **Avoid type assertions (`x as SomeType`) and
-    non-nullability assertions (`y!`)**. If you must use them, provide a clear
-    justification.
+## Formatting (no formatter is configured; copy the surrounding code)
+- No semicolons. Single quotes. 2-space indent. Trailing commas in multi-line literals.
+- Template literals for interpolation. `===` / `!==` only.
+- Lines under ~120 characters. One blank line between top-level declarations.
 
-## 2. Disallowed Features
+## Modules and imports
+- Import across folders with the `@/` alias (`@/services/sheets/api`); relative paths only for a
+  sibling in the same folder.
+- `import type { X }` for anything used only as a type (`verbatimModuleSyntax` is on).
+- Named exports everywhere. A default export is allowed **only** for `App.tsx`, `main.tsx` and Redux
+  `*Slice.ts` reducers (checked by `src/test/conventions.test.ts`).
+- No barrel files (`index.ts` that re-exports a folder) unless a task asks for one.
 
--   **`any` Type:** **Avoid `any`**. Prefer `unknown` or a more specific type.
--   **Wrapper Objects:** Do not instantiate `String`, `Boolean`, or `Number`
-    wrapper classes.
--   **Automatic Semicolon Insertion (ASI):** Do not rely on it. **Explicitly end
-    all statements with a semicolon.**
--   **`const enum`:** Do not use `const enum`. Use plain `enum` instead.
--   **`eval()` and `Function(...string)`:** Forbidden.
+## Types
+- **No `any`** in production code (checked by `conventions.test.ts`). Use `unknown` and narrow, or write the type.
+- No `as` casts except to type the JSON of an API response inside a client wrapper
+  (`(await response.json()) as { ... }`). Anywhere else, fix the types instead.
+- No non-null assertions (`x!`) outside tests.
+- Prefer optional fields (`price?: number`) to `number | undefined`. Use `null` only where an API/`patch`
+  contract needs it to mean "clear this value" (see `BookPatch`).
+- `tsconfig` has `erasableSyntaxOnly`: **no `enum`, no `namespace`, no constructor parameter properties**
+  (`constructor(private x: T)`). Declare the field, then assign it.
+- Unused imports and variables fail the build (`noUnusedLocals`). Remove them; do not prefix with `_`.
 
-## 3. Naming
+## Naming and files
+- Modules and non-component files: `camelCase.ts` (`coverCache.ts`). React components: `PascalCase.tsx`.
+  Tests sit next to the code as `name.test.ts`; shared fakes live in `src/test/`.
+- Types, interfaces, classes: `PascalCase`. Functions/variables: `camelCase`. Module constants: `CONSTANT_CASE`.
+- Error classes end in `Error` and set a stable `this.name` (the name is how errors are recognised, see below).
 
--   **`UpperCamelCase`:** For classes, interfaces, types, enums, and decorators.
--   **`lowerCamelCase`:** For variables, parameters, functions, methods, and
-    properties.
--   **`CONSTANT_CASE`:** For global constant values, including enum values.
--   **`_` Prefix/Suffix:** **Do not use `_` as a prefix or suffix** for
-    identifiers, including for private properties.
+## Structure
+- Keep pure logic apart from I/O: parsing/mapping/math in plain functions (`mapping.ts`, `image.ts`),
+  network in a thin client, orchestration in `api.ts` / thunks. Pure code is what gets unit-tested.
+- Pass dependencies in instead of reaching for globals: a client takes `getAccessToken` and `fetchImpl`;
+  thunks get `{ sheetId, fetchImpl, now }` from the store's `extra`. **Never call `new Date()` or `Math.random()`
+  deep inside logic that is tested**; accept a `now`/boundary argument (default it at the edge).
+- Functions do one thing. If a function needs a paragraph to explain, split it.
+- Release resources in `finally` (`bitmap.close()`, IndexedDB `db.close()`).
+- No floating promises: `await` it, return it, or write `void promise` on purpose with a reason.
+- No `console.log` in production code.
 
-## 4. Type System
+## Errors
+- Google API failures extend `GoogleApiError` (`src/services/google/errors.ts`): `name`, `message`,
+  `status?`, and `code` (`'401'`, `'500'`, `'NETWORK'`). Use the shared `SessionExpiredError` for 401 from
+  every API; never define a second class with the same name.
+- Redux Toolkit serializes thunk errors to `{ name, message, code }`. Code that handles a thunk's error
+  must branch on `error.name` / `error.code`, never `instanceof` or `status`.
+- Validate input before any optimistic state change. User-facing messages are direct and actionable.
 
--   **Type Inference:** Rely on type inference for simple, obvious types. Be
-    explicit for complex types.
--   **`undefined` and `null`:** Both are supported. Be consistent within your
-    project.
--   **Optional vs. `|undefined`:** Prefer optional parameters and fields (`?`)
-    over adding `|undefined` to the type.
--   **`Array<T>` Type:** Use `T[]` for simple types. Use `Array<T>` for more
-    complex union types (e.g., `Array<string | number>`).
--   **`{}` Type:** **Do not use `{}`**. Prefer `unknown`, `Record<string,
-    unknown>`, or `object`.
+## Browser storage
+- Use `src/lib/storage.ts` (`readStored` / `writeStored` / `removeStored`); raw `localStorage` throws when
+  storage is blocked (private windows). Checked by `conventions.test.ts`.
+- Never persist the access token anywhere (AGENTS.md hard constraint 7).
+- Cache keys are namespaced `bm.` and, when the value belongs to a Google account, include the account.
 
-## 5. Comments and Documentation
+## Comments
+- Explain *why* (a constraint, a Google API quirk, an ADR), not what the line does. Cite the ADR or the API
+  reference URL when the code exists because of one.
+- Do not restate types in JSDoc. Do not leave commented-out code or `// TODO` without a STATUS.md entry.
 
--   **JSDoc:** Use `/** JSDoc */` for documentation, `//` for implementation
-    comments.
--   **Redundancy:** **Do not declare types in `@param` or `@return` blocks**
-    (e.g., `/** @param {string} user */`). This is redundant in TypeScript.
--   **Add Information:** Comments must add information, not just restate the
-    code.
+## Dependencies
+- No new runtime dependency without updating `tech-stack.md` and, if it changes a decision, adding an ADR.
+- After running any generator (`npx shadcn add`, `npm create`, ...), re-read `package.json` and the new files'
+  imports. The shadcn CLI once installed an unrelated package called `cn`.
 
-*Source:
-[Google TypeScript Style Guide](https://google.github.io/styleguide/tsguide.html)*
+## React and styling
+- Function components and hooks; state that matters lives in Redux (ADR-0006), local UI state in `useState`.
+- Style with Tailwind utilities mapped to Fusion tokens (`bg-primary`, `bg-success`, `bg-attention`,
+  `bg-destructive`); never hardcode colors. Details: [product-guidelines.md](../product-guidelines.md).
+- Form controls 16px on mobile; honour `prefers-reduced-motion`.

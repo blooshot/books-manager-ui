@@ -1,5 +1,8 @@
 # Google HTML/CSS Style Guide Summary
 
+> **Scope in this project:** applies to `index.html` and hand-written CSS in `src/index.css` only. Components are styled
+> with Tailwind utilities mapped to the Fusion tokens (see `../product-guidelines.md`); do not add per-component CSS files.
+
 This document summarizes key rules and best practices from the Google HTML/CSS
 Style Guide.
 

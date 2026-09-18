@@ -47,3 +47,14 @@ files it created itself.
 - If the user renames or moves the `Book Covers` folder, the name lookup could
   create a second folder. Acceptable for a personal tool; documented so it is
   not a surprise.
+
+## Clarifications (from implementing and reviewing step 5)
+- **Upload format:** Drive's `uploadType=multipart` requires `multipart/related` (a JSON metadata part, then the media part), built by
+  `buildMultipartRelated`. `FormData` (`multipart/form-data`) must not be used; a guard test forbids it. JSON request bodies must be sent as
+  `application/json`.
+- **Folder cache:** the folder ID is cached per Google account and checked once per session, so a deleted, trashed, or foreign-client folder is
+  replaced instead of failing every upload. This also softens the "renamed/moved folder creates a second folder" consequence above.
+- **Cache storage:** covers are stored in IndexedDB as `ArrayBuffer` + MIME type (full image and ~240px thumbnail), not as `Blob`, for iOS Safari
+  reliability and testability. The cache is best-effort and never throws.
+- **Errors:** Drive and Sheets share one `SessionExpiredError` / `GoogleApiError` base (`src/services/google/errors.ts`).
+

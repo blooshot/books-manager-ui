@@ -27,3 +27,13 @@ and frameworks used in this project.
 
 -   Document *why* something is done, not just *what*.
 -   Keep documentation up-to-date with code changes.
+
+## Correctness before polish
+
+-   A task is finished when it meets the spec **and** the gate passes, not when the code looks done.
+    See [../workflow.md](../workflow.md) (Spec conformance, Definition of Done).
+-   Do not claim what you did not check. Separate "tested against a fake" from "verified against the real service".
+-   When something in the spec cannot or will not be done, say so explicitly; never tick it off silently.
+-   Language- and API-specific rules: [typescript.md](./typescript.md), [testing.md](./testing.md),
+    [google-apis.md](./google-apis.md).
+
