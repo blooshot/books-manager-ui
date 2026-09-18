@@ -4,9 +4,9 @@
 - [x] Task: Implement Drive API client wrapper (`src/services/drive/client.ts`) [8ccbffb]
   - [x] Write unit tests for API error mapping (401, 403, Network)
   - [x] Implement fetch wrapper and shared error base
-- [ ] Task: Implement image resizing math and link parsing (`src/lib/image.ts`, `src/services/drive/links.ts`)
-  - [ ] Write unit tests for sizing math and Drive URL/ID parsing
-  - [ ] Implement logic
+- [x] Task: Implement image resizing math and link parsing (`src/lib/image.ts`, `src/services/drive/links.ts`) [4c3d361]
+  - [x] Write unit tests for sizing math and Drive URL/ID parsing
+  - [x] Implement logic
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Folder & Photo Operations
