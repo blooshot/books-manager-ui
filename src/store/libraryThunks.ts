@@ -1,5 +1,11 @@
 import { createAsyncThunk, type Dispatch } from '@reduxjs/toolkit'
 import { formatDate, formatTime } from '@/lib/datetime'
+import type { CoverVariants } from '@/lib/image'
+import { createDriveClient, type DriveClient } from '@/services/drive/client'
+import { saveCoverToCache } from '@/services/drive/coverCache'
+import { createFolderResolver, type FolderResolver } from '@/services/drive/folder'
+import { createDriveFileUrl, getDriveFileIdFromUrl } from '@/services/drive/links'
+import { markReplaced, uploadCoverInFolder } from '@/services/drive/photos'
 import {
   appendBook,
   appendLoan,
@@ -20,6 +26,7 @@ import {
 } from '@/services/sheets/errors'
 import { bookSet, bookUpdated, booksLoaded } from '@/store/booksSlice'
 import { loanDiscarded, loanSet, loansLoaded } from '@/store/borrowersSlice'
+import { noticeAdded } from '@/store/noticesSlice'
 import { booksSelectors, selectOpenLoanByBookId } from '@/store/selectors'
 import { tokenExpired } from '@/store/sessionSlice'
 import type { RootState } from '@/store'
@@ -38,21 +45,56 @@ interface ThunkConfig {
 }
 
 /**
- * A client that reads the token from the store at call time. No token, or one past
- * its expiry, fails fast with SessionExpiredError (no request is made).
+ * The token is read from the store at call time. No token, or one past its expiry, fails fast
+ * with SessionExpiredError (no request is made). Shared by the Sheets and Drive clients.
  */
+function tokenGetter(getState: () => RootState, extra: ThunkExtra) {
+  return () => {
+    const { accessToken, expiresAt } = getState().session
+    if (!accessToken || (expiresAt !== null && expiresAt <= extra.now().getTime())) {
+      throw new SessionExpiredError()
+    }
+    return accessToken
+  }
+}
+
 function clientFor(getState: () => RootState, extra: ThunkExtra) {
-  return createSheetsClient({
-    sheetId: extra.sheetId,
-    fetchImpl: extra.fetchImpl,
-    getAccessToken: () => {
-      const { accessToken, expiresAt } = getState().session
-      if (!accessToken || (expiresAt !== null && expiresAt <= extra.now().getTime())) {
-        throw new SessionExpiredError()
-      }
-      return accessToken
-    },
-  })
+  return createSheetsClient({ sheetId: extra.sheetId, fetchImpl: extra.fetchImpl, getAccessToken: tokenGetter(getState, extra) })
+}
+
+function driveFor(getState: () => RootState, extra: ThunkExtra): DriveClient {
+  return createDriveClient({ fetchImpl: extra.fetchImpl, getAccessToken: tokenGetter(getState, extra) })
+}
+
+/** One folder resolver per Google account for the life of the app (keyed by `extra`, so tests stay isolated). */
+const folderResolvers = new WeakMap<ThunkExtra, Map<string, FolderResolver>>()
+
+function folderFor(getState: () => RootState, extra: ThunkExtra, drive: DriveClient): FolderResolver {
+  const account = getState().session.email ?? 'default'
+  let byAccount = folderResolvers.get(extra)
+  if (!byAccount) {
+    byAccount = new Map()
+    folderResolvers.set(extra, byAccount)
+  }
+  let resolver = byAccount.get(account)
+  if (!resolver) {
+    resolver = createFolderResolver(drive, account)
+    byAccount.set(account, resolver)
+  }
+  return resolver
+}
+
+/** Uploads a cover for `bookId` and returns the Photo-cell link. */
+async function uploadCoverLink(getState: () => RootState, extra: ThunkExtra, photo: CoverVariants, bookId: string): Promise<string> {
+  const drive = driveFor(getState, extra)
+  const fileId = await uploadCoverInFolder(drive, folderFor(getState, extra, drive), photo.full, bookId)
+  return createDriveFileUrl(fileId)
+}
+
+/** Best-effort: puts a freshly uploaded cover in the local cache so the list never re-downloads it. */
+async function cacheUploadedCover(photoUrl: string, photo: CoverVariants): Promise<void> {
+  const fileId = getDriveFileIdFromUrl(photoUrl)
+  if (fileId) await saveCoverToCache(fileId, photo.full, photo.thumb)
 }
 
 /**
@@ -88,24 +130,38 @@ export const loadAll = createAsyncThunk<void, void, ThunkConfig>(
 )
 
 /**
- * Not optimistic: the Book ID is assigned from a fresh read at write time (ADR-0006),
- * so the book appears in the store once the Sheet confirms it.
+ * Not optimistic: the Book ID is assigned from a fresh read at write time (ADR-0006), so the book appears
+ * in the store once the Sheet confirms it. With a photo, the cover is uploaded after the ID is chosen and
+ * before the row is written (ADR-0007), so a row never exists without its photo. If the row write then
+ * fails, the uploaded file is left in Drive as a harmless orphan.
  */
-export const addBook = createAsyncThunk<Book, NewBookInput, ThunkConfig>(
+export const addBook = createAsyncThunk<Book, NewBookInput & { photo?: CoverVariants }, ThunkConfig>(
   'library/addBook',
-  async (input, { dispatch, getState, extra }) => {
+  async ({ photo, ...input }, { dispatch, getState, extra }) => {
     const book = await withSessionCheck(dispatch, () =>
-      inWriteQueue(() => appendBook(clientFor(getState, extra), input, extra.now())),
+      inWriteQueue(() =>
+        appendBook(
+          clientFor(getState, extra),
+          input,
+          extra.now(),
+          photo ? (bookId) => uploadCoverLink(getState, extra, photo, bookId) : undefined,
+        ),
+      ),
     )
     dispatch(bookSet(book))
+    if (photo && book.photoUrl) await cacheUploadedCover(book.photoUrl, photo)
     return book
   },
 )
 
-/** Optimistic; rolls back to the previous book if the write fails. */
-export const editBook = createAsyncThunk<Book, { id: string; patch: BookPatch }, ThunkConfig>(
+/**
+ * Optimistic for the text fields; rolls back to the previous book if the write fails.
+ * A new `photo` is uploaded, then the Photo cell is updated, then the old cover is renamed (never deleted,
+ * ADR-0004). A failed rename does not fail the edit: it is reported as a notice instead.
+ */
+export const editBook = createAsyncThunk<Book, { id: string; patch: BookPatch; photo?: CoverVariants }, ThunkConfig>(
   'library/editBook',
-  async ({ id, patch }, { dispatch, getState, extra }) => {
+  async ({ id, patch, photo }, { dispatch, getState, extra }) => {
     const previous = booksSelectors.selectById(getState(), id)
     if (!previous) throw new BookNotFoundError(id)
     if (patch.title !== undefined && patch.title.trim() === '') throw new ValidationError('Title is required.')
@@ -116,18 +172,46 @@ export const editBook = createAsyncThunk<Book, { id: string; patch: BookPatch },
       ;(changes as Record<string, unknown>)[field] = value ?? undefined // null clears
     }
     dispatch(bookUpdated({ id, changes }))
+
+    let saved: Book
     try {
-      const saved = await withSessionCheck(dispatch, () =>
-        inWriteQueue(() => updateBook(clientFor(getState, extra), id, patch)),
+      saved = await withSessionCheck(dispatch, () =>
+        inWriteQueue(async () => {
+          const photoUrl = photo ? await uploadCoverLink(getState, extra, photo, id) : undefined
+          return updateBook(clientFor(getState, extra), id, photoUrl ? { ...patch, photoUrl } : patch)
+        }),
       )
-      dispatch(bookSet(saved))
-      return saved
     } catch (error) {
       dispatch(bookSet(previous))
       throw error
     }
+    dispatch(bookSet(saved))
+
+    if (photo && saved.photoUrl) {
+      await cacheUploadedCover(saved.photoUrl, photo)
+      await retireOldCover(dispatch, getState, extra, previous.photoUrl, saved.photoUrl, id)
+    }
+    return saved
   },
 )
+
+/** Renames the replaced cover so the owner can delete it by hand. Never deletes; never fails the edit. */
+async function retireOldCover(
+  dispatch: Dispatch,
+  getState: () => RootState,
+  extra: ThunkExtra,
+  oldUrl: string | undefined,
+  newUrl: string,
+  bookId: string,
+): Promise<void> {
+  const oldId = oldUrl ? getDriveFileIdFromUrl(oldUrl) : null
+  if (!oldId || oldId === getDriveFileIdFromUrl(newUrl)) return
+  try {
+    await markReplaced(driveFor(getState, extra), oldId, bookId)
+  } catch {
+    dispatch(noticeAdded(`The new cover for ${bookId} was saved, but the old cover file could not be renamed in Google Drive.`))
+  }
+}
 
 /** Optimistic; a book that is already out is rejected before anything changes. */
 export const borrowBook = createAsyncThunk<Loan, NewLoanInput, ThunkConfig>(

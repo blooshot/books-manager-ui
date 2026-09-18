@@ -58,20 +58,34 @@ function requireText(value: string | undefined, label: string): string {
   return trimmed
 }
 
-/** Assigns the next Book ID from a fresh read, then appends the row. */
-export async function appendBook(client: SheetsClient, input: NewBookInput, now: Date = new Date()): Promise<Book> {
+/**
+ * Assigns the next Book ID from a fresh read, then appends the row.
+ *
+ * `beforeAppend` runs after the ID is chosen and before the row is written, and may return the
+ * Photo link to store. It exists because a cover file is named after the Book ID (ADR-0007) and the
+ * upload must come first, so a row never exists without its photo. If it throws, nothing is written;
+ * if the append fails afterwards, the uploaded file is left behind as a harmless orphan.
+ */
+export async function appendBook(
+  client: SheetsClient,
+  input: NewBookInput,
+  now: Date = new Date(),
+  beforeAppend?: (bookId: string) => Promise<string | undefined>,
+): Promise<Book> {
   const title = requireText(input.title, 'Title')
   const author = requireText(input.author, 'Author')
   const [values] = await client.batchGet([BOOKS_TAB])
   const table = parseBooks(values)
+  const id = nextBookId(table.rows.map((r) => r.value.id))
+  const uploadedPhotoUrl = beforeAppend ? await beforeAppend(id) : undefined
   const book: Book = {
-    id: nextBookId(table.rows.map((r) => r.value.id)),
+    id,
     title,
     author,
     purchaseDate: input.purchaseDate || undefined,
     pricePaid: input.pricePaid,
     marketPrice: input.marketPrice,
-    photoUrl: input.photoUrl || undefined,
+    photoUrl: uploadedPhotoUrl ?? (input.photoUrl || undefined),
     addedAt: now.toISOString(),
   }
   await client.append(BOOKS_TAB, buildRow(table.columns, table.width, bookCells(book)))

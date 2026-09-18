@@ -57,4 +57,8 @@ files it created itself.
 - **Cache storage:** covers are stored in IndexedDB as `ArrayBuffer` + MIME type (full image and ~240px thumbnail), not as `Blob`, for iOS Safari
   reliability and testability. The cache is best-effort and never throws.
 - **Errors:** Drive and Sheets share one `SessionExpiredError` / `GoogleApiError` base (`src/services/google/errors.ts`).
+- **Upload timing:** the cover is named after the Book ID, which is only known once a fresh read has picked the next ID. So the upload runs *inside* the
+  serialized Sheet write, after the ID is chosen and before the row is appended. Upload failure writes nothing; a failed row write leaves an orphan file.
+- **Replacing a cover:** upload, update the Photo cell, then rename the old file. A failed rename never fails the edit; it surfaces as a notice.
+- **Missing folder mid-session:** an upload that gets 404 for the parent forgets the cached folder, re-resolves it, and retries once.
 

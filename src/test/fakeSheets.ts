@@ -41,6 +41,8 @@ export class FakeSheets {
   token = 'test-token'
   /** Set to make the next request fail with this status. */
   failNext?: number
+  /** Set to make the next request with this HTTP method fail (e.g. only the append/upload/rename). */
+  failNextMethod?: { method: string; status: number }
 
   constructor(tabs?: Partial<Record<'Books' | 'Borrowers', string[][]>>) {
     this.tabs = {
@@ -56,6 +58,11 @@ export class FakeSheets {
     this.calls.push({ method, url, body })
 
     const headers = new Headers(init?.headers)
+    if (this.failNextMethod && this.failNextMethod.method === method) {
+      const { status } = this.failNextMethod
+      this.failNextMethod = undefined
+      return json({ error: { message: `fake ${method} failure ${status}` } }, status)
+    }
     if (this.failNext) {
       const status = this.failNext
       this.failNext = undefined

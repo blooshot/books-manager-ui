@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createDriveClient } from '@/services/drive/client'
 import { DriveError, SessionExpiredError } from '@/services/drive/errors'
-import { fetchCoverBlob, markReplaced, uploadCover } from '@/services/drive/photos'
+import { createFolderResolver } from '@/services/drive/folder'
+import { fetchCoverBlob, markReplaced, uploadCover, uploadCoverInFolder } from '@/services/drive/photos'
 import { FakeDrive } from '@/test/fakeDrive'
 
 let drive: FakeDrive
@@ -13,6 +14,7 @@ const image = () => new Blob([IMAGE_BYTES], { type: 'image/jpeg' })
 
 beforeEach(() => {
   drive = new FakeDrive()
+  localStorage.clear() // the folder resolver caches its folder ID here
 })
 
 describe('uploadCover', () => {
@@ -45,6 +47,36 @@ describe('uploadCover', () => {
     const folder = drive.seed({ name: 'Book Covers' })
     const stale = createDriveClient({ getAccessToken: () => 'expired-token', fetchImpl: drive.fetch })
     await expect(uploadCover(stale, image(), 'B-0001', folder.id)).rejects.toBeInstanceOf(SessionExpiredError)
+  })
+})
+
+describe('uploadCoverInFolder', () => {
+  it('uploads into the Book Covers folder, creating it on first use', async () => {
+    const id = await uploadCoverInFolder(client(), createFolderResolver(client(), 'me@example.com'), image(), 'B-0001')
+    const folder = drive.byName('Book Covers')[0]
+    expect(drive.files.get(id)).toMatchObject({ name: 'B-0001.jpg', parents: [folder.id] })
+  })
+
+  it('recovers once when the folder disappeared after it was verified this session', async () => {
+    const resolver = createFolderResolver(client(), 'me@example.com')
+    const first = await uploadCoverInFolder(client(), resolver, image(), 'B-0001')
+    const oldFolder = drive.files.get(first)?.parents[0] ?? ''
+    drive.files.delete(oldFolder) // the owner deleted the folder mid-session
+
+    const second = await uploadCoverInFolder(client(), resolver, image(), 'B-0002')
+    const newFolder = drive.files.get(second)?.parents[0]
+    expect(newFolder).toBeDefined()
+    expect(newFolder).not.toBe(oldFolder)
+    expect(drive.files.get(newFolder ?? '')?.name).toBe('Book Covers')
+  })
+
+  it('does not retry on other failures (a 500 is surfaced, not repeated)', async () => {
+    const resolver = createFolderResolver(client(), 'me@example.com')
+    await resolver.getFolderId()
+    drive.calls = []
+    drive.failNextMethod = { method: 'POST', status: 500 }
+    await expect(uploadCoverInFolder(client(), resolver, image(), 'B-0001')).rejects.toMatchObject({ code: '500' })
+    expect(drive.calls.filter((c) => c.method === 'POST')).toHaveLength(1)
   })
 })
 

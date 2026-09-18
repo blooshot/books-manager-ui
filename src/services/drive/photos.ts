@@ -1,4 +1,6 @@
 import type { DriveClient } from '@/services/drive/client'
+import { DriveError } from '@/services/drive/errors'
+import type { FolderResolver } from '@/services/drive/folder'
 import { buildMultipartRelated } from '@/services/drive/multipart'
 
 /** Uploads a cover (already resized JPEG) into the covers folder and returns the new Drive file ID. */
@@ -10,6 +12,20 @@ export async function uploadCover(client: DriveClient, file: Blob, bookId: strin
     body,
   })
   return result.id
+}
+
+/**
+ * Uploads into the `Book Covers` folder, recovering once if the folder turns out to be gone
+ * (deleted or trashed after it was verified this session): forget it, find or create it again, retry.
+ */
+export async function uploadCoverInFolder(client: DriveClient, folder: FolderResolver, file: Blob, bookId: string): Promise<string> {
+  try {
+    return await uploadCover(client, file, bookId, await folder.getFolderId())
+  } catch (error) {
+    if (!(error instanceof DriveError) || error.status !== 404) throw error
+    folder.forget()
+    return uploadCover(client, file, bookId, await folder.getFolderId())
+  }
 }
 
 /** Downloads a cover's bytes. `<img>` can't send a Bearer token, so covers are fetched as blobs. */

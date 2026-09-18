@@ -4,7 +4,7 @@ Read this after `AGENTS.md` at the start of every session; update it at the end
 of every session or milestone (protocol in `AGENTS.md`; how to keep it consistent: `conductor/workflow.md`).
 Newest entries at the top of "Log". Keep it short and factual.
 
-**Last updated:** 2026-09-19 · **By:** Claude Code (after cross-review of Conductor's step 5)
+**Last updated:** 2026-09-19 · **By:** Claude Code (step 5b)
 
 ## Where we are
 
@@ -17,13 +17,13 @@ Build order (from `AGENTS.md`):
 | 3 | Vite + React + Tailwind + shadcn/ui scaffold, Fusion tokens, Redux store, GIS sign-in | **Done** (Claude) |
 | 4 | Sheets read/write service layer + no-delete guard | **Done** (Claude) — fake Sheet only |
 | 5 | Drive photo service layer (folder, upload, fetch, rename, cache, links, resize) | **Done after review fixes** (built by Conductor, corrected by Claude) — fake Drive only |
-| 5b | Wire photos into the store (upload-before-row, replace = rename, cover loading + cache) | **Next** (brief below) |
-| 6 | Screens (in the order in `AGENTS.md`), incl. photo capture UI | Not started |
+| 5b | Wire photos into the store (upload-before-row, replace = rename, cover loading + cache) | **Done** (Claude) — fake Sheets + fake Drive only |
+| 6 | Screens (in the order in `AGENTS.md`), incl. photo capture UI | **Next** (brief below) |
 | 7 | Outbox + Sync button | Not started |
 | 8 | Protected range on `Books` (verify owner behaviour, ADR-0004) | Not started, needs the real Sheet |
 | 9 | Deploy + CI/CD | Not started |
 
-`npm run verify` passes: **166 tests in 15 files**, build OK, 1 known lint warning (generated `button.tsx`).
+`npm run verify` passes: **195 tests in 17 files**, build OK, 1 known lint warning (generated `button.tsx`).
 
 ## What exists
 
@@ -52,6 +52,20 @@ selectors (`selectOpenLoanByBookId`, `selectLentOutByBorrower`). Fusion tokens i
 - `lib/image.ts` — sizing math, `resizeToJpeg`, `createCoverVariants` (1000px full, 240px thumb) with injectable browser deps.
 - Tests: `src/test/fakeDrive.ts` is strict about JSON content type, `multipart/related`, `drive.file` visibility, and refuses DELETE.
 
+**Step 5b** — photos wired into the store:
+- `addBook({ …, photo?: { full, thumb } })`: inside the serialized write, after the Book ID is chosen and **before** the row is appended,
+  the cover is uploaded as `<BookID>.jpg` (via `appendBook`'s new `beforeAppend` hook); the row stores the Drive link; the full image and
+  thumbnail go into the local cache. Upload failure writes nothing. A row-write failure after the upload leaves only an orphan file.
+- `editBook({ id, patch, photo? })`: text fields optimistic; a new photo is uploaded, the Photo cell updated, then the old cover is **renamed**
+  `deleted-file-<BookID>.jpg` (never deleted). A failed rename does not fail the edit; it becomes a notice (`notices` slice: `noticeAdded` /
+  `noticeDismissed`) for the UI to show.
+- One `FolderResolver` per Google account (memoized per store); an upload that hits a missing folder (404) forgets it, re-resolves, and retries once (`uploadCoverInFolder`).
+- `src/services/drive/covers.ts` — `createCoverLoader` / `createBrowserCoverLoader(driveClient)`: `getCoverUrl(fileId, 'thumb' | 'full')` serves
+  IndexedDB first, Drive on a miss; derives a missing thumbnail from a cached full image (no re-download); simultaneous requests share one load;
+  thumbnail failure falls back to the full image without caching it; `releaseAll()` revokes object URLs. **Nothing in the UI uses it yet.**
+- Tests: `src/store/libraryThunks.photos.test.ts` runs `FakeSheets` and `FakeDrive` together (request order asserted). Control checks done: wrong upload
+  order, never retiring the old cover, rename failure failing the edit, and skipped cache all turn tests red.
+
 **Guards/conventions** — `src/test/no-delete.test.ts`: no delete/clear/`trashed:true`/trash/`FormData` upload; Sheets endpoint
 allow-list; Drive method allow-list and PATCH-only-rename. `src/test/conventions.test.ts`: no raw storage outside `lib/storage.ts`,
 no `any`, default exports only for App/main/slices.
@@ -67,7 +81,8 @@ no `any`, default exports only for App/main/slices.
   `drive.file` can see the folder it created on the next session; `files.get?fields=id,trashed` on the cached folder.
 - **Browser-only code has never run in a browser:** `resizeToJpeg` (canvas, `createImageBitmap`, EXIF orientation), IndexedDB cache in
   real Safari/Chrome/Firefox, the UI (layout, dark mode, Button styling). jsdom has no canvas; only the logic around the browser APIs is tested.
-- **Photos are not wired in yet:** nothing in the store or UI calls the Drive layer (step 5b).
+- **Photos are wired into the store, but no screen uses them:** no photo capture UI, no cover display, and `createBrowserCoverLoader` has never run
+  (object URLs, real IndexedDB, canvas thumbnails) in a browser.
 - Real-run checklist for the Sheets side: `npm run dev`, sign in, expect "N books · M currently lent out". Likely first failures:
   `http://localhost:5173` missing from authorised origins; tab names not exactly `Books` / `Borrowers`; a header missing (the error names
   it); APIs not enabled. Date columns must be formatted `yyyy-mm-dd` or dates read back in the Sheet's locale format.
@@ -83,6 +98,10 @@ no `any`, default exports only for App/main/slices.
   `BookNotFoundError`, `SheetSchemaError`) and `error.code` (`'401'`, `'403'`, `'404'`, `'500'`, `'NETWORK'`). Outbox-retryable: `SessionExpiredError` and `NETWORK`.
 - **Sheet writes are serialized** (`inWriteQueue`): each derives something from a fresh read. A hung request would block later writes.
 - `addBook` is not optimistic (ID assigned at write time); edit/borrow/return are. Blank input is rejected before any optimistic change (ADR-0006).
+- **Photo flow:** the cover file is named after the Book ID, which is only known at write time, so the upload happens *inside* the serialized write
+  (after the ID is chosen, before the row). This refines the earlier "upload first, then append" wording. If the row write fails after the upload,
+  the uploaded file's ID is not surfaced (Redux keeps only `name`/`message`/`code`): the outbox (step 7) must upload and remember the file ID
+  *before* attempting the row so a retry can reuse it, or accept re-uploading. A retry after an orphan creates a second `B-000N.jpg` (harmless).
 - **Drive:** JSON bodies need `application/json`; uploads need `multipart/related` (never `FormData`); `drive.file` sees only app-created files.
   Never `trashed: true`. Rename, don't delete.
 - **IndexedDB under jsdom** (`fake-indexeddb`) cannot round-trip a `Blob` (returns `{}`); the cache stores `ArrayBuffer` + type (also safer on iOS Safari).
@@ -93,30 +112,40 @@ no `any`, default exports only for App/main/slices.
 - Owner's local files (not committed on purpose): `THE-LAST-SYNC.txt`, and a `.gitignore` line for it whose path
   (`books-management/THE-LAST-SYNC.txt`) is wrong relative to the repo root — it should read `THE-LAST-SYNC.txt`.
 
-## Next: step 5b brief — wire photos into the store (ADR-0007)
+## Next: step 6 brief — screens (`AGENTS.md` > Screens; Fusion design system)
 
-Goal: photos flow through the store using the finished Drive layer. No screens yet (capture UI is step 6). Same layering and fake-`fetch`
-tests as before; **read `conductor/code_styleguides/` first.**
+Big step: **split it into three tracks** (each with the Completion Report from `conductor/workflow.md`), reviewed by the other tool between tracks.
+Read `conductor/code_styleguides/` and `conductor/product-guidelines.md` first. Adding a router or UI components updates `conductor/tech-stack.md`.
 
-- **Drive access in thunks:** build a Drive client from the same token/`fetchImpl` as Sheets (`ThunkExtra`), and one `FolderResolver` per
-  signed-in account (memoized; dropped on sign-out / account change). On an upload 404 for the parent, `forget()` and retry once.
-- **`addBook` with a photo** (`{ full, thumb }` from `createCoverVariants`): upload `full` **first**, then append the Sheet row with
-  `createDriveFileUrl(fileId)`, then `saveCoverToCache(fileId, full, thumb)` (best-effort). If the row write fails, the upload is an
-  orphan file (harmless); the outbox (step 7) will reuse the uploaded file ID, so return/keep it in the error path.
-- **`editBook` with a new photo:** upload new, `updateBook` the Photo cell, then `markReplaced(oldFileId, bookId)` (best-effort: a failed
-  rename must not fail the edit; record it). The old cover is renamed, never deleted.
-- **Cover loading:** `src/services/drive/covers.ts` — `getCoverUrl(fileId, 'thumb' | 'full')`: cache hit -> object URL; miss -> `fetchCoverBlob`
-  -> cache -> object URL; a thumb miss on a cover cached without one derives it with `resizeToJpeg(…, THUMB_EDGE)`. Track and revoke object URLs.
-- **Tests (use `FakeSheets` + `FakeDrive` together):** upload happens before the row append (assert call order); a failed row write leaves
-  an orphan file and no Photo cell; replacing renames the old file and never trashes/deletes; cache is populated and a second read makes
-  no Drive call; token expiry mid-flow flips the session to `expired` and rolls back; blank title still rejected before any upload.
-- **Acceptance:** all of the above green; guard tests still pass; control check for the upload-ordering test; `npm run verify` passes on the final code;
-  STATUS.md updated per `conductor/workflow.md`, including a Completion Report (Done / Verified / Not verified / Deviations / Follow-ups).
+Shared groundwork (in 6a):
+- Routing: React Router with **hash routing** (static hosts, no server rewrites). Routes: `/` list, `/books/:id` detail, `/lent-out`, dialogs/sheets for add/edit/borrow/return.
+- `useCoverUrl(fileId, variant)` hook over `createBrowserCoverLoader` (one loader per signed-in session, `releaseAll()` on sign-out), with the generated placeholder tile
+  (title initial, Fusion tokens) when there is no photo or loading fails.
+- Toasts: render `notices` (dismiss with `noticeDismissed`) and thunk errors by `error.name` / `error.code` (see Gotchas).
+- Responsive shell: collapsible sidebar on desktop, bottom nav on phone; light theme default with the existing toggle.
+- shadcn components as needed (`npx shadcn add ...`; **re-check `package.json` and imports after each**).
 
-Later steps have their design in `AGENTS.md` (Data flow, Screens) and ADR-0006/0007.
+**6a — browse (read-only):** book list (table on desktop, cards on phone; cover thumb, title, author, *Available* `bg-success` / *Borrowed* neutral pill),
+search by title/author + status filter (client-side selectors), book detail with borrow history (activity feed), empty/loading/error states (`SheetSchemaError`
+and 403 "wrong account" messages), refresh button.
+**6b — add/edit book:** shared form (Book ID read-only, title/author required, optional dates/prices in `VITE_CURRENCY`), photo capture
+(`<input type="file" accept="image/*" capture="environment">` -> `createCoverVariants` -> thunk `photo`), soft duplicate-title warning, form drafts mirrored to
+`sessionStorage` through `lib/storage` (extend it with a session variant; no photo, no token), 16px controls on mobile.
+**6c — borrow / return / lent out:** borrow (name autocomplete from past borrowers, date/time default now, place; Dialog on desktop, bottom Sheet on phone),
+one-tap return, Lent out screen grouped by borrower (Accordion, uses `selectLentOutByBorrower`).
+
+Acceptance for every track: Testing Library tests against the real store with `FakeSheets`/`FakeDrive` (no mocks of our own modules); keyboard/label basics
+(`accessibility` skill); layouts checked at phone and desktop widths; **no delete affordance anywhere**; `npm run verify` on the final code. What can only be judged
+in a real browser (visual polish, camera capture, real Google) goes under **Not verified**.
+
+Step 7 (outbox + Sync) follows; see ADR-0006 and the photo-flow gotcha above.
 
 ## Log
 
+- 2026-09-19 — Claude Code: **step 5b done.** Photos wired into `addBook`/`editBook` (upload inside the write before the row, replace = rename, best-effort cache, retry once
+  on a missing folder), `covers.ts` loader, `notices` slice, two-fake integration tests. **Verified:** `npm run verify` on the final code: 195 tests / 17 files, build OK, 1 known
+  lint warning; four control checks red-then-green. **Not verified:** real Google, real browser, cover loader in a browser. **Deviation:** upload happens after the ID is chosen,
+  inside the write (the file is named by Book ID), not strictly "before the write". **Follow-up:** outbox must handle orphan uploads (step 7).
 - 2026-09-19 — Claude Code: **cross-review of step 5 and fixes.** Found verify red, tautological cache tests, missing thumbnail,
   JSON sent without Content-Type, `FormData` upload (Drive needs `multipart/related`), duplicate `SessionExpiredError`, fragile folder
   cache, a delete-guard gap (`trashed:true`), loose link parser. Fixed all; tests rewritten against a strict `FakeDrive` (control checks

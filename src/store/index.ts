@@ -3,6 +3,7 @@ import { config } from '@/lib/config'
 import booksReducer from '@/store/booksSlice'
 import borrowersReducer from '@/store/borrowersSlice'
 import libraryReducer from '@/store/librarySlice'
+import noticesReducer from '@/store/noticesSlice'
 import type { ThunkExtra } from '@/store/libraryThunks'
 import sessionReducer from '@/store/sessionSlice'
 
@@ -17,6 +18,7 @@ export const makeStore = (extra: ThunkExtra = defaultExtra) =>
     reducer: {
       session: sessionReducer,
       library: libraryReducer,
+      notices: noticesReducer,
       books: booksReducer,
       borrowers: borrowersReducer,
     },
