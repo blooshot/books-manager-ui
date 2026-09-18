@@ -26,6 +26,7 @@ import {
 } from '@/services/sheets/errors'
 import { bookSet, bookUpdated, booksLoaded } from '@/store/booksSlice'
 import { loanDiscarded, loanSet, loansLoaded } from '@/store/borrowersSlice'
+import { accessTokenGetter } from '@/store/accessToken'
 import { noticeAdded } from '@/store/noticesSlice'
 import { booksSelectors, selectOpenLoanByBookId } from '@/store/selectors'
 import { tokenExpired } from '@/store/sessionSlice'
@@ -44,26 +45,12 @@ interface ThunkConfig {
   extra: ThunkExtra
 }
 
-/**
- * The token is read from the store at call time. No token, or one past its expiry, fails fast
- * with SessionExpiredError (no request is made). Shared by the Sheets and Drive clients.
- */
-function tokenGetter(getState: () => RootState, extra: ThunkExtra) {
-  return () => {
-    const { accessToken, expiresAt } = getState().session
-    if (!accessToken || (expiresAt !== null && expiresAt <= extra.now().getTime())) {
-      throw new SessionExpiredError()
-    }
-    return accessToken
-  }
-}
-
 function clientFor(getState: () => RootState, extra: ThunkExtra) {
-  return createSheetsClient({ sheetId: extra.sheetId, fetchImpl: extra.fetchImpl, getAccessToken: tokenGetter(getState, extra) })
+  return createSheetsClient({ sheetId: extra.sheetId, fetchImpl: extra.fetchImpl, getAccessToken: accessTokenGetter(getState, extra.now) })
 }
 
 function driveFor(getState: () => RootState, extra: ThunkExtra): DriveClient {
-  return createDriveClient({ fetchImpl: extra.fetchImpl, getAccessToken: tokenGetter(getState, extra) })
+  return createDriveClient({ fetchImpl: extra.fetchImpl, getAccessToken: accessTokenGetter(getState, extra.now) })
 }
 
 /** One folder resolver per Google account for the life of the app (keyed by `extra`, so tests stay isolated). */
