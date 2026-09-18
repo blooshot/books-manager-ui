@@ -12,6 +12,7 @@ const FORBIDDEN: [string, RegExp][] = [
   ['Sheets deleteSheet', /deleteSheet/],
   ['Sheets values:clear', /values\/[^'"`\s]*:(batchClear|clear)|:batchClear/],
   ['Drive emptyTrash', /emptyTrash/],
+  ['Drive file delete', /files\/[^'"`\s]*(\s*,?\s*\{.*method:\s*['"`]DELETE['"`])/i], // Ensures we don't accidentally do a DELETE on a Drive file
   ['HTTP DELETE', /method:\s*['"`]DELETE['"`]/i],
 ]
 
