@@ -9,6 +9,7 @@ import type { OutboxStorage } from '@/services/outbox/types'
 import outboxReducer from '@/store/outboxSlice'
 import type { ThunkExtra } from '@/store/thunkExtra'
 import sessionReducer from '@/store/sessionSlice'
+import taxonomyReducer from '@/store/taxonomySlice'
 
 export type StoreOptions = Omit<ThunkExtra, 'outbox'> & { outbox?: OutboxStorage }
 
@@ -28,6 +29,7 @@ export const makeStore = (options: StoreOptions = defaultOptions) => {
       outbox: outboxReducer,
       books: booksReducer,
       borrowers: borrowersReducer,
+      taxonomy: taxonomyReducer,
     },
     middleware: (getDefaultMiddleware) => getDefaultMiddleware({ thunk: { extraArgument: extra } }),
   })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterBookItems, parseStatus, selectBookListItems, sortLoansNewestFirst, type BookListItem } from '@/features/books/bookList'
+import { filterBookItems, parseSort, parseStatus, selectBookListItems, sortBookItems, sortLoansNewestFirst, type BookListItem } from '@/features/books/bookList'
 import { makeStore } from '@/store'
 import { booksLoaded } from '@/store/booksSlice'
 import { loansLoaded } from '@/store/borrowersSlice'
@@ -81,5 +81,37 @@ describe('sortLoansNewestFirst', () => {
     ]
     expect(sortLoansNewestFirst(input).map((l) => l.key)).toEqual(['c', 'b', 'a'])
     expect(input.map((l) => l.key)).toEqual(['a', 'b', 'c'])
+  })
+})
+
+describe('sortBookItems / parseSort', () => {
+  const dated = (id: string, title: string, purchaseDate?: string): BookListItem => item({ ...book(id, title), purchaseDate })
+  const items = [dated('B-1', 'Anathem'), dated('B-2', 'Dune', '2024-01-10'), dated('B-3', 'Emma', '2025-06-01'), dated('B-4', 'Zen', '2024-01-10')]
+  const ids = (list: BookListItem[]) => list.map((i) => i.book.id)
+
+  it('title order leaves the list as given', () => {
+    expect(sortBookItems(items, 'title')).toBe(items)
+  })
+
+  it('newest first: later dates first, ties keep title order, undated last', () => {
+    expect(ids(sortBookItems(items, 'newest'))).toEqual(['B-3', 'B-2', 'B-4', 'B-1'])
+  })
+
+  it('oldest first: earlier dates first, ties keep title order, undated still last', () => {
+    expect(ids(sortBookItems(items, 'oldest'))).toEqual(['B-2', 'B-4', 'B-3', 'B-1'])
+  })
+
+  it('does not change the list it is given', () => {
+    const before = ids(items)
+    sortBookItems(items, 'newest')
+    expect(ids(items)).toEqual(before)
+  })
+
+  it('reads only known values from the URL', () => {
+    expect(parseSort('newest')).toBe('newest')
+    expect(parseSort('oldest')).toBe('oldest')
+    expect(parseSort('title')).toBe('title')
+    expect(parseSort('nonsense')).toBe('title')
+    expect(parseSort(null)).toBe('title')
   })
 })

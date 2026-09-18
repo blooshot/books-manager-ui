@@ -4,7 +4,7 @@ Read this after `AGENTS.md` at the start of every session; update it at the end
 of every session or milestone (protocol in `AGENTS.md`; how to keep it consistent: `conductor/workflow.md`).
 Newest entries at the top of "Log". Keep it short and factual.
 
-**Last updated:** 2026-09-19 · **By:** Claude Code (polish after the owner's real-Google run)
+**Last updated:** 2026-09-19 · **By:** Claude Code (categories and languages, desktop layout, tests in `tests/` folders)
 
 ## Where we are
 
@@ -22,10 +22,11 @@ Build order (from `AGENTS.md`):
 | 6b | Screens: add/edit book form with photo capture, form drafts | **Done** (Claude, committed `c7510da`) — fake Sheets/Drive, jsdom only |
 | 6c | Screens: borrow / return, Lent out | **Done** (Claude, committed `1ff697f`) — fake Sheets/Drive, jsdom only |
 | 7 | Outbox + Sync button | **Done** (Claude, committed `7e48b8a`) — fakes only |
+| 7b | Owner's UI request: header menu, card grid, sort, **categories + languages** (ADR-0008) | **Done** (Claude) — fakes and stubbed Chrome only; **owner must add the two tabs and two columns to the real Sheet** (README > Sheet setup) |
 | 8 | Protected range on `Books` (verify owner behaviour, ADR-0004) | **Next**, owner-driven (brief below) — needs the real Sheet |
 | 9 | Deploy + CI/CD | Not started (brief below) |
 
-`npm run verify` passes: **491 tests in 35 files**; `npm run ui:check` passes **7 flows**, build OK, 1 known lint warning (generated `button.tsx`).
+`npm run verify` passes: **578 tests in 40 files**; `npm run ui:check` passes **9 flows**, build OK, 1 known lint warning (generated `button.tsx`).
 
 ## What exists
 
@@ -65,7 +66,7 @@ selectors (`selectOpenLoanByBookId`, `selectLentOutByBorrower`). Fusion tokens i
 - `src/services/drive/covers.ts` — `createCoverLoader` / `createBrowserCoverLoader(driveClient)`: `getCoverUrl(fileId, 'thumb' | 'full')` serves
   IndexedDB first, Drive on a miss; derives a missing thumbnail from a cached full image (no re-download); simultaneous requests share one load;
   thumbnail failure falls back to the full image without caching it; `releaseAll()` revokes object URLs. **Nothing in the UI uses it yet.**
-- Tests: `src/store/libraryThunks.photos.test.ts` runs `FakeSheets` and `FakeDrive` together (request order asserted). Control checks done: wrong upload
+- Tests: `src/store/tests/libraryThunks.photos.test.ts` runs `FakeSheets` and `FakeDrive` together (request order asserted). Control checks done: wrong upload
   order, never retiring the old cover, rename failure failing the edit, and skipped cache all turn tests red.
 
 **Step 6a** — browse screens (`src/features/`, `src/App.tsx`, `src/main.tsx`):
@@ -138,14 +139,29 @@ selectors (`selectOpenLoanByBookId`, `selectLentOutByBorrower`). Fusion tokens i
 - `scripts/ui-check/` (`npm run ui:check`, dev dependency `puppeteer-core`): real Chrome + Google stubbed at the network layer (sign-in script, userinfo, Sheets read/append/update, 400 for an unknown tab). 7 flows: deep-link login redirect, sign-out and next sign-in at home, add a book (a real write), offline change ->
   unsent-changes warning -> sent at next sign-in, missing tabs, wrong header, phone vs desktop layout. Control-checked (4 breakages, all caught). Not part of `verify`.
 
-**Guards/conventions** — `src/test/no-delete.test.ts`: no delete/clear/`trashed:true`/trash/`FormData` upload; Sheets endpoint
-allow-list; Drive method allow-list and PATCH-only-rename. `src/test/conventions.test.ts`: no raw storage outside `lib/storage.ts`,
+**Dropdowns** — `components/ui/select.tsx` is a themed Radix Select (`options`, `value`, `onValueChange`; `value: ''` is a normal choice such as "All categories"). Used for Sort by, Category, Language (list) and Language (form). A convention test forbids a native `<select>` in production code. In tests use `src/test/select.ts` (`chooseOption`, `optionsOf`, `shownIn`): open the trigger, then click the option; `setup.ts` polyfills the browser APIs Radix needs.
+
+**Categories and languages** (ADR-0008; the owner's request after step 7):
+- Sheet: tabs `Categories` / `Languages` (`Name`, `Active`) and `Books` columns `Categories` (names joined by `, `) / `Language`. All optional on read: `readAll` asks for four ranges in one `batchGet`, and if a list tab is missing repeats without it (`SheetTabMissingError.tab`); `LibraryData.setup`
+  says what to add. Writing a category/language into a Books column the Sheet lacks throws `SheetSchemaError` (before any cover upload). `mapping.ts`: `OPTIONAL_BOOK_FIELDS` (column index -1), `parseNameList`, `parseOptions`.
+- `sheets/api.ts`: `addOption` (an archived name is restored, not duplicated), `renameOption` (list row + the same text on every book in one `batchUpdate`; repeat-safe), `setOptionActive` (archive/restore). **No delete**: guard test and endpoint allow-list untouched.
+- Store: `taxonomySlice` (`categories`, `languages`, `setup`), `taxonomyThunks` (not optimistic, **not queued** in the outbox, ADR-0008), `selectActiveCategories/Languages`. Book add/edit carry `categories` / `language` through the normal outbox ops.
+- UI: category checkboxes + language select on the book form (`OptionFields.tsx`; archived values already on a book are kept on save; language shows `Name (archived)`); list has Category and Language filters, **Group by category** (default off, `?group=category`; a book in two categories appears under both; leftovers under Uncategorized), a tags line on cards, and detail rows;
+  `/categories` page (`features/categories/`) with add / rename / archive / restore and per-entry book counts; "Categories" in the header menu and bottom nav. Filters and grouping live in the URL (`category`, `language`, `group`, `sort`).
+- Tests: `api.options.test.ts` (25), `BookFormOptions` (9), `BookListOptions` (14), `ManageOptions` (12), form/mapping/list unit tests, two outbox tests. 8 control checks (no fallback for missing tabs, no book sweep on rename, writing to a missing column allowed, order-sensitive categories, Uncategorized first, archived shown in pickers, store changed before the Sheet, store books not renamed) all red -> green.
+
+**Desktop layout** — header menu (Books, Lent out, Categories, Add book), sidebar hidden (`SHOW_SIDEBAR` in `AppLayout`; `layout/Sidebar.tsx` still tested), `max-w-6xl` column, product-card grid on desktop, Sort by purchase date.
+
+**Guards/conventions** — `src/test/tests/no-delete.test.ts`: no delete/clear/`trashed:true`/trash/`FormData` upload; Sheets endpoint
+allow-list; Drive method allow-list and PATCH-only-rename. `src/test/tests/conventions.test.ts`: no raw storage outside `lib/storage.ts`,
 no `any`, default exports only for App/main/slices.
 
 **Conductor** — `conductor/` context files defer to `AGENTS.md`. Coding rules for every tool: `conductor/code_styleguides/`
 (`typescript.md`, `testing.md`, `google-apis.md`); past mistakes and their rules: `conductor/lessons-learned.md`.
 
 ## Not verified (be honest about these)
+
+- **Categories and languages have never run against the real Sheet.** The two tabs and two columns do not exist there yet (owner action). Only `FakeSheets`, jsdom and the stubbed-Chrome check ran. Unverified against real Google: that a missing tab really returns `Unable to parse range: Categories` in a *four-range* `batchGet` (the fallback depends on it; the three-range case matched the earlier real 400), that `Active` = `Yes/No` typed cells read back as strings, and rename sweeping many rows in one `batchUpdate`.
 
 - **Verified by the owner against real Google (2026-09-19):** sign-in, loading the Sheet, adding and editing books, **photo upload and replace on real Drive**, borrow, return, and the Lent out screen all worked on the owner's real Sheet. (Reported as working; details such as
   the exact Drive folder contents or renamed `deleted-file-*` files were not inspected by me.)
@@ -217,6 +233,10 @@ no `any`, default exports only for App/main/slices.
 - Owner's local files (not committed on purpose): `THE-LAST-SYNC.txt`, and a `.gitignore` line for it whose path
   (`books-management/THE-LAST-SYNC.txt`) is wrong relative to the repo root — it should read `THE-LAST-SYNC.txt`.
 
+## Owner action for categories
+
+On the real Sheet: add tabs `Categories` and `Languages` (header `Name`, `Active` in A1:B1) and the columns `Categories`, `Language` to the end of `Books` (README > Sheet setup). Then press Sync, open **Categories**, and add your lists (e.g. Self-help, Business, Psychology; English, Hindi). The app works without them, but shows a setup hint.
+
 ## Next: step 8 brief — protected range on `Books` (owner-driven; ADR-0004)
 
 Goal: verify, on a **scratch copy** of the Sheet, what the protected range really does, then apply it to the real one and correct ADR-0004 with the facts. This cannot be done from tests.
@@ -234,6 +254,15 @@ Decisions needed first: static host (Cloudflare Pages / Netlify / GitHub Pages) 
 
 ## Log
 
+- 2026-09-19 — Claude Code: **dropdowns are now the themed Select.** The owner saw the dropdown lists looked unstyled: they were native `<select>` elements, whose open list the browser draws. Replaced with a Radix Select (same `radix-ui` package the dialog uses, no new dependency) in the sort, category and language controls and the form's language field; the open list uses the Fusion card, border, highlight and check mark, with the same open motion as dialogs (reduced motion respected).
+  **Verified:** `npm run verify` and `npm run ui:check` 9/9 (the flow now opens the dropdown with real mouse presses and saves `dropdown-open.png`, which I looked at); the convention test fails when a native `<select>` is planted. **Not verified:** on a real phone (touch, and how the popover sits above a mobile keyboard), dark mode, keyboard typeahead in a real browser (Radix provides it; only clicks were exercised). **Build:** the main JS bundle is now 518 kB (165 kB gzipped), just over Vite's 500 kB warning (a warning only; I did not measure it before this change, so I can't say how much the Select added). Code-splitting the routes would fix it if it matters. **Note:** the fixed phone bottom nav can cover a control scrolled to the very bottom edge of the screen; the Chrome flow had to scroll it to the middle first. Not changed.
+- 2026-09-19 — Claude Code: **categories and languages (stage 2 of the owner's UI request).** Designed with the owner: multiple categories per book, "delete" = archive (`Active`), languages as a managed list too, list writes online-only (ADR-0008, new). Built the Sheets layer, store, form pickers, list filters/grouping, detail rows and the `/categories` page.
+  **Verified:** `npm run verify` 578 tests / 40 files, build OK, 1 known lint warning; `npm run ui:check` 9/9 (new: manage/tag/group/rename/archive in real Chrome against the stub; an older Sheet without the tabs); 8 control checks red -> green; screenshots looked at (desktop list with filters, Categories page on phone). **Found and fixed by the new tests:** a missing list tab was mis-indexed
+  (`indexOf` -1 read the Borrowers tab as the list), and a repeated rename treated its own already-renamed row as a name clash (would have broken retry). **Not verified:** the real Sheet (see Not verified), dark mode, a real phone. **Deviations:** list changes are not queued and not optimistic (ADR-0008 vs ADR-0006); grouping is off by default, not the default view. **Follow-ups:** owner adds the tabs/columns; step 8; step 9.
+- 2026-09-19 — Claude Code: **desktop layout, sort, tests moved (stage 1 of the owner's UI request; stage 2 = categories + language is next, not started).** Desktop: the header now holds the menu (Books, Lent out, **Add book**); the sidebar is unchanged but hidden (`SHOW_SIDEBAR` in `AppLayout`; code in `layout/Sidebar.tsx`, still tested);
+  header and page share a `max-w-6xl` column so a wide monitor no longer stretches; the desktop list is a **product-card grid** (cover, title, author, market price + "Paid", "Bought" date, status) instead of a table; phone is unchanged. New **Sort by** (title / purchased newest / purchased oldest, undated books always last, in the URL as `?sort=`).
+  All test files moved from `dir/x.test.ts` into `dir/tests/x.test.ts` (`git mv`); they keep the `.test.ts(x)` suffix because vitest only discovers `*.test.*` (a `.tests.ts` name would have silently stopped every test running). The two guard tests now find `src` two levels up; a planted `DELETE` and a planted `any` both turned them red, then green after reverting.
+  **Verified:** `npm run verify` 504 tests / 36 files, build OK, 1 known lint warning; `npm run ui:check` 7/7 (asserts header links, no sidebar/table, card grid, and a 1152px cap at 2560px wide); screenshot looked at. **Not verified:** real covers in the card grid (the stub has none), dark mode, real Google. **Deviation:** AGENTS.md says "Table on desktop, cards on phone"; this replaces that (see the Screens section). **Follow-ups:** stage 2; `AGENTS.md` Screens/list wording.
 - 2026-09-19 — Claude Code: **polish.** The header **Sync** button is now the only refresh control (it sends unsent changes, then reloads; it spins and disables while sending *or* loading, and its tooltip says what it does); the list page's look-alike **Refresh** button is gone.
   The detail page shows `Added` as local `yyyy-mm-dd HH:mm` instead of the raw ISO timestamp (`formatTimestamp`). The owner reported real-Google runs of sign-in, Sheet load, add/edit, photos, borrow/return and Lent out all working. **Verified:** `npm run verify` on the final code: 491 tests / 35 files, build OK, 1 known lint warning;
   `npm run ui:check` 7/7 (the layout and add-book flows now assert the single Sync control and the readable Added time); 3 control checks red -> green in both layers; screenshots looked at. **Not verified:** dark mode; a real phone; the real offline/sync/expiry flows (owner steps given). **Follow-ups:** step 8 (owner), step 9.

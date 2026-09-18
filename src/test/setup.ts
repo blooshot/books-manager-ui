@@ -19,3 +19,14 @@ setViewport('phone')
 let objectUrlCount = 0
 URL.createObjectURL ??= () => `blob:test/${++objectUrlCount}`
 URL.revokeObjectURL ??= () => undefined
+
+// jsdom lacks a few browser APIs that Radix Select (the themed dropdown) relies on
+Element.prototype.hasPointerCapture ??= () => false
+Element.prototype.setPointerCapture ??= () => undefined
+Element.prototype.releasePointerCapture ??= () => undefined
+Element.prototype.scrollIntoView ??= () => undefined
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}

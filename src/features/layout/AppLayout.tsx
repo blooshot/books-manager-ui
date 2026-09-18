@@ -1,62 +1,46 @@
-import { BookOpen, PanelLeftClose, PanelLeftOpen, Users, type LucideIcon } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Plus } from 'lucide-react'
+import { useEffect } from 'react'
 import { Link, NavLink, Outlet } from 'react-router'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { ReconnectBanner } from '@/features/auth/ReconnectBanner'
 import { SignOutControl } from '@/features/auth/SignOutControl'
+import { NAV_ITEMS } from '@/features/layout/navItems'
 import { NoticesHost } from '@/features/layout/NoticesHost'
-import { readStored, writeStored } from '@/lib/storage'
+import { Sidebar } from '@/features/layout/Sidebar'
 import { useIsDesktop } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { SyncControl } from '@/features/sync/SyncControl'
 import { startSync } from '@/store/outboxThunks'
 
-interface NavItem {
-  to: string
-  label: string
-  icon: LucideIcon
-  end?: boolean
-}
+/** The sidebar is built and tested but hidden: with two destinations the header menu is enough. Flip to show it again. */
+const SHOW_SIDEBAR: boolean = false
 
-const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Books', icon: BookOpen, end: true },
-  { to: '/lent-out', label: 'Lent out', icon: Users },
-]
+/** Header and page content share one width so nothing drifts to the edges of a wide monitor. */
+const CONTENT_WIDTH = 'mx-auto w-full max-w-6xl'
 
-const SIDEBAR_KEY = 'bm.sidebarCollapsed'
-
-function Sidebar() {
-  const [collapsed, setCollapsed] = useState(() => readStored(SIDEBAR_KEY) === '1')
-  function toggle() {
-    writeStored(SIDEBAR_KEY, collapsed ? '0' : '1')
-    setCollapsed(!collapsed)
-  }
+function HeaderMenu() {
   return (
-    <aside className={cn('flex shrink-0 flex-col gap-2 border-r bg-card p-2 transition-[width] duration-150 motion-reduce:transition-none', collapsed ? 'w-14' : 'w-52')}>
-      <nav aria-label="Main">
-        <ul className="space-y-1">
-          {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
-            <li key={to}>
-              <NavLink
-                to={to}
-                end={end}
-                title={label}
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-accent aria-[current=page]:bg-accent aria-[current=page]:font-medium aria-[current=page]:text-primary"
-              >
-                <Icon className="size-4 shrink-0" aria-hidden />
-                <span className={cn(collapsed && 'sr-only')}>{label}</span>
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      <Button variant="ghost" size="sm" className="mt-auto justify-start" onClick={toggle} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-        {collapsed ? <PanelLeftOpen aria-hidden /> : <PanelLeftClose aria-hidden />}
-        <span className={cn(collapsed && 'sr-only')}>Collapse</span>
+    <nav aria-label="Main" className="flex items-center gap-1">
+      {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={end}
+          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent aria-[current=page]:bg-accent aria-[current=page]:font-medium aria-[current=page]:text-primary"
+        >
+          <Icon className="size-4 shrink-0" aria-hidden />
+          {label}
+        </NavLink>
+      ))}
+      <Button asChild size="sm" className="ml-2">
+        <NavLink to="/books/new">
+          <Plus aria-hidden />
+          Add book
+        </NavLink>
       </Button>
-    </aside>
+    </nav>
   )
 }
 
@@ -92,18 +76,23 @@ export function AppLayout() {
     <div className="flex min-h-dvh flex-col">
       <ReconnectBanner />
       <div className="flex flex-1">
-        {isDesktop && <Sidebar />}
+        {SHOW_SIDEBAR && isDesktop && <Sidebar />}
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-center justify-between gap-2 border-b bg-card px-4 py-3">
-            <Link to="/" className="font-display text-lg font-bold">My Library</Link>
-            <div className="flex items-center gap-2">
-              {email && <span className="hidden font-mono text-xs text-muted-foreground sm:inline">{email}</span>}
-              <SyncControl />
-              <ThemeToggle />
-              <SignOutControl />
+          <header className="border-b bg-card">
+            <div className={cn(CONTENT_WIDTH, 'flex items-center justify-between gap-2 px-4 py-3')}>
+              <div className="flex items-center gap-6">
+                <Link to="/" className="font-display text-lg font-bold">My Library</Link>
+                {isDesktop && <HeaderMenu />}
+              </div>
+              <div className="flex items-center gap-2">
+                {email && <span className="hidden font-mono text-xs text-muted-foreground sm:inline">{email}</span>}
+                <SyncControl />
+                <ThemeToggle />
+                <SignOutControl />
+              </div>
             </div>
           </header>
-          <main className={cn('mx-auto w-full max-w-5xl flex-1 p-4', !isDesktop && 'pb-24')}>
+          <main className={cn(CONTENT_WIDTH, 'flex-1 p-4', !isDesktop && 'pb-24')}>
             <Outlet />
           </main>
         </div>

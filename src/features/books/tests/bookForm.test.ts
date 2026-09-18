@@ -11,7 +11,7 @@ import {
 } from '@/features/books/bookForm'
 import type { Book } from '@/types/library'
 
-const valid: BookFormValues = { title: 'Dune', author: 'Herbert', purchaseDate: '2025-12-31', pricePaid: '500', marketPrice: '1,200.50' }
+const valid: BookFormValues = { title: 'Dune', author: 'Herbert', purchaseDate: '2025-12-31', pricePaid: '500', marketPrice: '1,200.50', categories: [], language: '' }
 const saved: Book = { id: 'B-0001', title: 'Dune', author: 'Herbert', purchaseDate: '2025-12-31', pricePaid: 500, marketPrice: 1200.5 }
 
 describe('parseAmount', () => {
@@ -59,13 +59,42 @@ describe('validateBookForm', () => {
 
 describe('toNewBookInput', () => {
   it('trims text, converts amounts, and turns empty optional fields into undefined', () => {
-    expect(toNewBookInput({ title: '  Dune ', author: ' Herbert', purchaseDate: '', pricePaid: '1,500', marketPrice: '' })).toEqual({
+    expect(toNewBookInput({ ...EMPTY_BOOK_FORM, title: '  Dune ', author: ' Herbert', pricePaid: '1,500' })).toEqual({
       title: 'Dune',
       author: 'Herbert',
       purchaseDate: undefined,
       pricePaid: 1500,
       marketPrice: undefined,
+      categories: undefined,
+      language: undefined,
     })
+  })
+
+  it('carries categories and a trimmed language', () => {
+    expect(toNewBookInput({ ...valid, categories: ['Business', 'Self-help'], language: ' Hindi ' })).toMatchObject({
+      categories: ['Business', 'Self-help'],
+      language: 'Hindi',
+    })
+  })
+})
+
+describe('categories and language in the patch', () => {
+  const tagged: Book = { ...saved, categories: ['Business', 'Self-help'], language: 'English' }
+
+  it('a book with categories and language round-trips with no patch', () => {
+    expect(valuesFromBook(tagged)).toMatchObject({ categories: ['Business', 'Self-help'], language: 'English' })
+    expect(toBookPatch(valuesFromBook(tagged), tagged)).toEqual({})
+  })
+
+  it('the order of categories is not a change', () => {
+    expect(toBookPatch({ ...valuesFromBook(tagged), categories: ['Self-help', 'Business'] }, tagged)).toEqual({})
+  })
+
+  it('adding, removing and clearing', () => {
+    expect(toBookPatch({ ...valuesFromBook(tagged), categories: ['Business', 'Self-help', 'Psychology'] }, tagged)).toEqual({ categories: ['Business', 'Self-help', 'Psychology'] })
+    expect(toBookPatch({ ...valuesFromBook(tagged), categories: [] }, tagged)).toEqual({ categories: null })
+    expect(toBookPatch({ ...valuesFromBook(tagged), language: '' }, tagged)).toEqual({ language: null })
+    expect(toBookPatch({ ...valuesFromBook(saved), language: 'Hindi' }, saved)).toEqual({ language: 'Hindi' })
   })
 })
 
@@ -81,6 +110,8 @@ describe('valuesFromBook / toBookPatch', () => {
       purchaseDate: '',
       pricePaid: '',
       marketPrice: '',
+      categories: [],
+      language: '',
     })
   })
 

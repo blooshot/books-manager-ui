@@ -121,6 +121,38 @@ describe('queueing a write that cannot be sent', () => {
     expect(rig.sheets.tabs.Books[1][1]).toBe('Dune')
   })
 
+  it('editing categories and language while offline: shown at once, queued as plain data, described, sent on Sync, survives a reload', async () => {
+    await loadedRig()
+    rig.network.offline = true
+    await rig.store.dispatch(editBook({ id: 'B-0001', patch: { categories: ['Business', 'Self-help'], language: 'Hindi' } })).unwrap()
+
+    const book = () => booksSelectors.selectById(state(), 'B-0001')
+    expect(book()).toMatchObject({ categories: ['Business', 'Self-help'], language: 'Hindi' })
+    expect(entries()[0].summary).toBe('Edit “Dune” (categories, language)')
+    expect(rig.sheets.tabs.Books[1][8]).toBe('')
+
+    // a refresh while still waiting must not hide the pending change
+    rig.network.offline = false
+    await rig.store.dispatch(loadAll())
+    expect(book()?.categories).toEqual(['Business', 'Self-help'])
+
+    await rig.store.dispatch(flushOutbox())
+    expect(rig.sheets.tabs.Books[1][8]).toBe('Business, Self-help')
+    expect(rig.sheets.tabs.Books[1][9]).toBe('Hindi')
+    expect(entries()).toHaveLength(0)
+  })
+
+  it('adding a book with categories while offline sends them with the row on Sync', async () => {
+    await loadedRig()
+    rig.network.offline = true
+    await rig.store.dispatch(addBook({ title: 'Godan', author: 'Premchand', categories: ['Fiction'], language: 'Hindi' })).unwrap()
+    rig.network.offline = false
+    await rig.store.dispatch(flushOutbox())
+    expect(rig.sheets.tabs.Books[3].slice(1, 3)).toEqual(['Godan', 'Premchand'])
+    expect(rig.sheets.tabs.Books[3][8]).toBe('Fiction')
+    expect(rig.sheets.tabs.Books[3][9]).toBe('Hindi')
+  })
+
   it('edit with a new photo while offline: the photo bytes are stored with the entry', async () => {
     await loadedRig()
     rig.network.offline = true

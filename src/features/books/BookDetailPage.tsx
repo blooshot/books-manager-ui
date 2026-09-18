@@ -2,6 +2,7 @@ import { ArrowLeft, Pencil } from 'lucide-react'
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router'
 import { Button } from '@/components/ui/button'
+import { visibleCategories } from '@/features/books/bookList'
 import { BorrowHistory } from '@/features/books/BorrowHistory'
 import { StatusBadge } from '@/features/books/StatusBadge'
 import { BookActions } from '@/features/loans/BookActions'
@@ -9,7 +10,7 @@ import { CoverImage } from '@/features/covers/CoverImage'
 import { formatTimestamp } from '@/lib/datetime'
 import { formatMoney } from '@/lib/format'
 import { useAppSelector } from '@/store/hooks'
-import { booksSelectors, loansSelectors, selectOpenLoanByBookId } from '@/store/selectors'
+import { booksSelectors, loansSelectors, selectActiveCategories, selectOpenLoanByBookId } from '@/store/selectors'
 
 function BackLink() {
   return (
@@ -34,6 +35,7 @@ export function BookDetailPage() {
   const openLoan = useAppSelector((s) => selectOpenLoanByBookId(s).get(id))
   const allLoans = useAppSelector(loansSelectors.selectAll)
   const libraryStatus = useAppSelector((s) => s.library.status)
+  const activeCategories = useAppSelector(selectActiveCategories)
   const loans = useMemo(() => allLoans.filter((loan) => loan.bookId === id), [allLoans, id])
 
   if (!book) {
@@ -81,6 +83,8 @@ export function BookDetailPage() {
           <BookActions book={book} openLoan={openLoan} />
           <dl>
             <Field label="Book ID" mono>{book.id}</Field>
+            <Field label="Categories">{visibleCategories(book, activeCategories).join(', ') || '—'}</Field>
+            <Field label="Language">{book.language ?? '—'}</Field>
             <Field label="Purchase date" mono>{book.purchaseDate ?? '—'}</Field>
             <Field label="Price paid" mono>{formatMoney(book.pricePaid)}</Field>
             <Field label="Market price" mono>{formatMoney(book.marketPrice)}</Field>

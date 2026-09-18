@@ -27,7 +27,7 @@ Its ID is the long part of the URL: `https://docs.google.com/spreadsheets/d/<THI
 
    `Books`
    ```
-   Book ID	Title	Author	Purchase date	Price paid	Current market price	Photo	Added at
+   Book ID	Title	Author	Purchase date	Price paid	Current market price	Photo	Added at	Categories	Language
    ```
    `Borrowers`
    ```
@@ -37,7 +37,14 @@ Its ID is the long part of the URL: `https://docs.google.com/spreadsheets/d/<THI
    may be added; the app finds columns by header name. Every header above must exist.
 3. Format the date columns (`Purchase date`, `Borrowed date`, `Returned date`) as **Format > Number > Custom date and time > `yyyy-mm-dd`**, and the time columns
    (`Borrowed time`, `Returned time`) as **`HH:mm`**. Otherwise dates read back in your locale's format and retried writes cannot be recognised.
-4. Optional: freeze row 1, and protect the `Books` tab (see `docs/STATUS.md`, step 8).
+4. For categories and languages, add two more tabs named **exactly** `Categories` and `Languages`, each with this header row (paste into **A1**):
+   ```
+   Name	Active
+   ```
+   Then manage the lists in the app (**Categories** in the header menu). The `Categories` and `Languages` tabs and the `Categories` / `Language` columns on
+   `Books` are optional: an older Sheet without them still works, and the app tells you what to add. Never delete rows from these tabs by hand if you want to
+   restore something later: the app archives instead (`Active` = `No`), and a hand-typed row with no `Active` value counts as active.
+5. Optional: freeze row 1, and protect the `Books` tab (see `docs/STATUS.md`, step 8).
 
 If the app says *"The Sheet has no tab named ..."* or *"is missing column(s) ..."*, this section is the fix.
 

@@ -10,7 +10,7 @@ Everything talks to Google from the browser with the user's own token (ADR-0002)
    failing test first ([testing.md](./testing.md) rule 3).
 3. Anything only tested against a fake is **not verified against real Google**. Say so in STATUS.md.
 
-## Hard rules (mechanically checked by `src/test/no-delete.test.ts`)
+## Hard rules (mechanically checked by `src/test/tests/no-delete.test.ts`)
 - Books are append-only. **No** `deleteDimension` / `deleteRange` / `deleteSheet`, no `values:clear` /
   `batchClear`, no HTTP `DELETE`, no `files.delete`, no `emptyTrash`.
 - **No `trashed: true`** and no `/trash` call: moving a file to the trash is a soft delete.

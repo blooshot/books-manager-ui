@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
  * Cheap, mechanical checks for rules in conductor/code_styleguides. They exist because these
  * rules were broken once already; a rule nobody can run is a rule nobody follows.
  */
-const SRC = path.resolve(import.meta.dirname, '..')
+const SRC = path.resolve(import.meta.dirname, '..', '..')
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -44,6 +44,14 @@ describe('code conventions', () => {
       .filter((f) => /^export default /m.test(readFileSync(f, 'utf8')))
       .map(rel)
       .filter((f) => !allowed.test(path.basename(f)))
+    expect(offenders).toEqual([])
+  })
+
+  it('uses the themed Select (components/ui/select.tsx), not a native <select>, whose open list ignores the design system', () => {
+    const offenders = production
+      .filter((f) => rel(f) !== path.join('components', 'ui', 'select.tsx'))
+      .filter((f) => /<select[\s>]/.test(readFileSync(f, 'utf8')))
+      .map(rel)
     expect(offenders).toEqual([])
   })
 })

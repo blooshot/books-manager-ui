@@ -10,7 +10,20 @@ export interface Book {
   /** Google Drive file link; empty means placeholder cover. */
   photoUrl?: string
   addedAt?: string // ISO timestamp
+  /** Category names (a book can be in several). Text, so archiving a category never changes a book. */
+  categories?: string[]
+  /** One language name. */
+  language?: string
 }
+
+/** One row of the `Categories` or `Languages` tab. Archived ones are hidden from pickers and filters, never removed. */
+export interface ListOption {
+  name: string
+  active: boolean
+}
+
+/** The two managed lists, each with its own tab. */
+export type OptionList = 'categories' | 'languages'
 
 /** One row of the `Borrowers` tab: a single loan. */
 export interface Loan {

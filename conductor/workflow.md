@@ -52,7 +52,7 @@ A task is complete when **all** of these hold:
 3.  For anything a user sees or navigates, it has been **looked at in a real browser** (run `npm run ui:check`, and add a flow for anything new; or the Not verified list says it has not); component tests cannot show a missing redirect or a broken layout. Tests are real ([testing.md](./code_styleguides/testing.md)): they call the code under test, use the strict fakes, cover
     failure paths, and a control check was done for any new guard.
 4.  Code follows `code_styleguides/`; no `any`, no raw `localStorage`, no new dependency without updating `tech-stack.md`.
-5.  New network calls are covered by the allow-list guard in `src/test/no-delete.test.ts`; the append-only rules are intact.
+5.  New network calls are covered by the allow-list guard in `src/test/tests/no-delete.test.ts`; the append-only rules are intact.
 6.  `docs/STATUS.md` is updated **completely** (see below).
 7.  User has manually reviewed and approved the code (no English explanations during the review prompt).
 8.  Implementation notes added to `plan.md`; changes committed with a proper message.

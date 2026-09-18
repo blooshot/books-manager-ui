@@ -28,7 +28,7 @@ that cannot happen again. Runner: Vitest + jsdom. Gate: `npm run verify`.
 ## 4. Prove a guard catches its bug (control check)
 - For every rule added as a guard/regression test, temporarily reintroduce the bug once and confirm the test
   goes red, then restore. Record "control check done" in the task's notes.
-- Guard patterns in `src/test/no-delete.test.ts` have a self-test (`guard patterns`); add a sample for every new pattern.
+- Guard patterns in `src/test/tests/no-delete.test.ts` have a self-test (`guard patterns`); add a sample for every new pattern.
 
 ## 5. What to cover
 - Happy path **and** each failure class: 401, 403, 404, 5xx, network error, malformed/empty response.

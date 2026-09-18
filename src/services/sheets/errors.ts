@@ -24,12 +24,14 @@ export class SheetsPermissionError extends SheetsError {
  * which says nothing about what to do; this does. It is a setup problem, so it is never retried or queued.
  */
 export class SheetTabMissingError extends Error {
+  readonly tab: string
   constructor(tab: string) {
     super(
       `The Sheet has no tab named "${tab}". The app needs two tabs named exactly "Books" and "Borrowers" ` +
         '(capital first letter, no extra spaces). Rename or add them, then press Sync. See README > Sheet setup.',
     )
     this.name = 'SheetTabMissingError'
+    this.tab = tab
   }
 }
 

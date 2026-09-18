@@ -17,7 +17,8 @@ window.google = { accounts: { oauth2: {
   revoke(token, done) { window.__revoked = token; done() },
 } } };`
 
-export const BOOK_HEADER = ['Book ID', 'Title', 'Author', 'Purchase date', 'Price paid', 'Current market price', 'Photo', 'Added at']
+export const BOOK_HEADER = ['Book ID', 'Title', 'Author', 'Purchase date', 'Price paid', 'Current market price', 'Photo', 'Added at', 'Categories', 'Language']
+export const OPTION_HEADER = ['Name', 'Active']
 export const LOAN_HEADER = ['Book ID', 'Borrower name', 'Borrowed date', 'Borrowed time', 'Place', 'Returned', 'Returned date', 'Returned time']
 
 /** The pretend Google side of a flow. Change `online` or `sheets` while a flow runs to simulate things going wrong. */
@@ -29,11 +30,13 @@ export function newWorld() {
     sheets: {
       Books: [
         BOOK_HEADER,
-        ['B-0001', 'Dune', 'Frank Herbert', '2025-12-31', '500', '1200', '', '2026-01-01T00:00:00.000Z'],
+        ['B-0001', 'Dune', 'Frank Herbert', '2025-12-31', '500', '1200', '', '2026-01-01T00:00:00.000Z', 'Self-help', 'English'],
         ['B-0002', 'Emma', 'Jane Austen', '', '', '', '', ''],
         ['B-0003', 'The Left Hand of Darkness', 'Ursula K. Le Guin', '', '250', '', '', ''],
       ],
       Borrowers: [LOAN_HEADER, ['B-0002', 'Ravi', '2026-09-01', '10:00', 'Office', 'No', '', '']],
+      Categories: [OPTION_HEADER, ['Business', 'Yes'], ['Self-help', 'Yes']],
+      Languages: [OPTION_HEADER, ['English', 'Yes'], ['Hindi', 'Yes']],
     },
     writes: [],
   }

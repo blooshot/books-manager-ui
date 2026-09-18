@@ -17,7 +17,7 @@ Precedence: `AGENTS.md` and `docs/adr/` > this file > everything else. Read
   sibling in the same folder.
 - `import type { X }` for anything used only as a type (`verbatimModuleSyntax` is on).
 - Named exports everywhere. A default export is allowed **only** for `App.tsx`, `main.tsx` and Redux
-  `*Slice.ts` reducers (checked by `src/test/conventions.test.ts`).
+  `*Slice.ts` reducers (checked by `src/test/tests/conventions.test.ts`).
 - No barrel files (`index.ts` that re-exports a folder) unless a task asks for one.
 
 ## Types
@@ -33,7 +33,7 @@ Precedence: `AGENTS.md` and `docs/adr/` > this file > everything else. Read
 
 ## Naming and files
 - Modules and non-component files: `camelCase.ts` (`coverCache.ts`). React components: `PascalCase.tsx`.
-  Tests sit next to the code as `name.test.ts`; shared fakes live in `src/test/`.
+  Tests sit in a `tests/` folder next to the code they cover (`store/tests/name.test.ts`) and must keep the `.test.ts(x)` suffix, or vitest will not find them; shared fakes live in `src/test/`.
 - Types, interfaces, classes: `PascalCase`. Functions/variables: `camelCase`. Module constants: `CONSTANT_CASE`.
 - Error classes end in `Error` and set a stable `this.name` (the name is how errors are recognised, see below).
 

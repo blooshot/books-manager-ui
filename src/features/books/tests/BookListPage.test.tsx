@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { bookRow, loanRow } from '@/test/fixtures'
 import { FakeSheets } from '@/test/fakeSheets'
 import { renderApp } from '@/test/render'
+import { chooseOption, shownIn } from '@/test/select'
 
 const PHOTO = 'https://drive.google.com/file/d/1aBcDeFgHiJkLmNoPqRsTuVwXyZ123456/view?usp=drivesdk'
 
@@ -47,15 +48,88 @@ describe('book list (phone: cards)', () => {
   })
 })
 
-describe('book list (desktop: table)', () => {
-  it('renders a table with the columns and one row per book', async () => {
+describe('book list (desktop: product cards)', () => {
+  function libraryWithPrices() {
+    const sheets = libraryWithThreeBooks()
+    sheets.tabs.Books[1] = bookRow({ id: 'B-0001', title: 'Dune', author: 'Frank Herbert', photo: PHOTO, pricePaid: 450, marketPrice: 600, purchaseDate: '2025-03-14' })
+    return sheets
+  }
+
+  it('shows each book as a card: cover, title, author, prices, purchase date and status; no table', async () => {
+    renderApp({ sheets: libraryWithPrices(), viewport: 'desktop' })
+    await screen.findByText('Dune')
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    const cards = within(screen.getByRole('list', { name: 'Books' })).getAllByRole('link')
+    expect(cards).toHaveLength(3)
+    expect(cards[0]).toHaveAttribute('href', '/books/B-0003') // Anathem first
+    const dune = cards[1]
+    expect(within(dune).getByRole('img', { name: 'Cover of Dune' })).toBeInTheDocument()
+    expect(within(dune).getByText('Frank Herbert')).toBeInTheDocument()
+    expect(within(dune).getByText(/600/)).toBeInTheDocument()
+    expect(within(dune).getByText(/Paid.*450/)).toBeInTheDocument()
+    expect(within(dune).getByText('Bought 2025-03-14')).toBeInTheDocument()
+    expect(within(dune).getByText('Available')).toBeInTheDocument()
+    expect(within(cards[2]).getByText('Borrowed')).toBeInTheDocument()
+    expect(within(cards[2]).getByText(/Ravi/)).toBeInTheDocument()
+  })
+
+  it('leaves out price lines a book does not have', async () => {
     renderApp({ sheets: libraryWithThreeBooks(), viewport: 'desktop' })
-    const table = await screen.findByRole('table')
-    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Cover', 'Title', 'Author', 'Book ID', 'Status'])
-    const rows = within(table).getAllByRole('row').slice(1)
-    expect(rows).toHaveLength(3)
-    expect(within(rows[0]).getByRole('link', { name: 'Anathem' })).toHaveAttribute('href', '/books/B-0003')
-    expect(within(rows[2]).getByText('Borrowed')).toBeInTheDocument()
+    await screen.findByText('Dune')
+    const card = screen.getByText('emma').closest('a') as HTMLElement
+    expect(within(card).queryByText(/Paid/)).not.toBeInTheDocument()
+    expect(within(card).queryByText(/Bought/)).not.toBeInTheDocument()
+  })
+
+  it('has no Add book button in the page body: it is in the header menu', async () => {
+    renderApp({ sheets: libraryWithThreeBooks(), viewport: 'desktop' })
+    await screen.findByText('Dune')
+    const links = screen.getAllByRole('link', { name: 'Add book' })
+    expect(links).toHaveLength(1)
+    expect(within(screen.getByRole('banner')).getByRole('link', { name: 'Add book' })).toBeInTheDocument()
+  })
+})
+
+describe('sorting', () => {
+  function datedLibrary() {
+    const sheets = new FakeSheets()
+    sheets.tabs.Books.push(
+      bookRow({ id: 'B-0001', title: 'Dune', author: 'A', purchaseDate: '2024-01-10' }),
+      bookRow({ id: 'B-0002', title: 'Emma', author: 'B', purchaseDate: '2025-06-01' }),
+      bookRow({ id: 'B-0003', title: 'Anathem', author: 'C' }),
+      bookRow({ id: 'B-0004', title: 'Zen', author: 'D', purchaseDate: '2023-12-31' }),
+    )
+    return sheets
+  }
+  const titles = () => within(screen.getByRole('list', { name: 'Books' })).getAllByRole('link').map((c) => within(c).getByText(/^(Anathem|Dune|Emma|Zen)$/).textContent)
+
+  it('defaults to title order and keeps it out of the URL', async () => {
+    renderApp({ sheets: datedLibrary() })
+    await screen.findByText('Dune')
+    expect(titles()).toEqual(['Anathem', 'Dune', 'Emma', 'Zen'])
+    expect(shownIn('Sort by')).toBe('Title A–Z')
+    expect(location()).toBe('/')
+  })
+
+  it('newest purchase first, books with no purchase date last, and the choice lives in the URL', async () => {
+    const { user } = renderApp({ sheets: datedLibrary() })
+    await screen.findByText('Dune')
+    await chooseOption(user, 'Sort by', 'Purchased: newest first')
+    expect(titles()).toEqual(['Emma', 'Dune', 'Zen', 'Anathem'])
+    expect(location()).toBe('/?sort=newest')
+  })
+
+  it('oldest purchase first still puts undated books last', async () => {
+    renderApp({ sheets: datedLibrary(), route: '/?sort=oldest' })
+    await screen.findByText('Dune')
+    expect(shownIn('Sort by')).toBe('Purchased: oldest first')
+    expect(titles()).toEqual(['Zen', 'Dune', 'Emma', 'Anathem'])
+  })
+
+  it('sorts the books that match the search, and an unknown sort in the URL means title order', async () => {
+    renderApp({ sheets: datedLibrary(), route: '/?sort=sideways&q=e' })
+    await screen.findByText('Dune')
+    expect(titles()).toEqual(['Anathem', 'Dune', 'Emma', 'Zen'])
   })
 })
 
@@ -200,7 +274,7 @@ describe('refreshing is done by the one Sync button', () => {
 describe('no destructive actions (ADR-0004)', () => {
   it('offers no delete or remove control on the list', async () => {
     renderApp({ sheets: libraryWithThreeBooks(), viewport: 'desktop' })
-    await screen.findByRole('table')
+    await screen.findByText('Dune')
     expect(screen.queryByRole('button', { name: /delete|remove|clear all/i })).not.toBeInTheDocument()
   })
 })

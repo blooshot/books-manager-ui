@@ -8,6 +8,8 @@ export interface BookRowInput {
   marketPrice?: number | string
   photo?: string
   addedAt?: string
+  categories?: string
+  language?: string
 }
 
 export const bookRow = (b: BookRowInput): string[] => [
@@ -19,7 +21,12 @@ export const bookRow = (b: BookRowInput): string[] => [
   String(b.marketPrice ?? ''),
   b.photo ?? '',
   b.addedAt ?? '',
+  b.categories ?? '',
+  b.language ?? '',
 ]
+
+/** A row for the Categories or Languages tab. */
+export const optionRow = (name: string, active = true): string[] => [name, active ? 'Yes' : 'No']
 
 export interface LoanRowInput {
   bookId: string

@@ -22,32 +22,35 @@ describe('sign-in gate', () => {
 })
 
 describe('layout', () => {
-  it('desktop: a sidebar with the current page marked, and no bottom nav', async () => {
+  it('desktop: the header menu has Books, Lent out and Add book, the current page marked; no sidebar, no bottom nav', async () => {
     renderApp({ sheets: oneBook(), viewport: 'desktop' })
     const nav = await screen.findByRole('navigation', { name: 'Main' })
     expect(within(nav).getByRole('link', { name: 'Books' })).toHaveAttribute('aria-current', 'page')
+    expect(within(nav).getByRole('link', { name: 'Lent out' })).not.toHaveAttribute('aria-current')
+    expect(within(nav).getByRole('link', { name: 'Add book' })).toHaveAttribute('href', '/books/new')
+    expect(within(screen.getByRole('banner')).getByRole('navigation', { name: 'Main' })).toBe(nav)
     expect(screen.getAllByRole('navigation', { name: 'Main' })).toHaveLength(1)
-    expect(screen.getByRole('complementary')).toBeInTheDocument()
-  })
-
-  it('phone: a bottom nav and no sidebar', async () => {
-    renderApp({ sheets: oneBook(), viewport: 'phone' })
-    const nav = await screen.findByRole('navigation', { name: 'Main' })
-    expect(within(nav).getByRole('link', { name: 'Books' })).toBeInTheDocument()
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /collapse sidebar/i })).not.toBeInTheDocument()
   })
 
-  it('remembers a collapsed sidebar across visits, keeping the labels for screen readers', async () => {
-    const first = renderApp({ sheets: oneBook(), viewport: 'desktop' })
-    await first.user.click(await screen.findByRole('button', { name: 'Collapse sidebar' }))
-    expect(localStorage.getItem('bm.sidebarCollapsed')).toBe('1')
-    expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument()
-    expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('link', { name: 'Books' })).toBeInTheDocument()
-    first.unmount()
+  it('desktop: the header menu takes you to Lent out and to the add form', async () => {
+    const { user } = renderApp({ sheets: oneBook(), viewport: 'desktop' })
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    await user.click(within(nav).getByRole('link', { name: 'Lent out' }))
+    expect(await screen.findByRole('heading', { name: 'Lent out' })).toBeInTheDocument()
+    expect(within(nav).getByRole('link', { name: 'Lent out' })).toHaveAttribute('aria-current', 'page')
+    await user.click(within(nav).getByRole('link', { name: 'Add book' }))
+    expect(await screen.findByRole('heading', { name: 'Add book' })).toBeInTheDocument()
+  })
 
-    renderApp({ sheets: oneBook(), viewport: 'desktop' })
-    expect(await screen.findByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument()
+  it('phone: a bottom nav and no header menu or sidebar', async () => {
+    renderApp({ sheets: oneBook(), viewport: 'phone' })
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    expect(within(nav).getByRole('link', { name: 'Books' })).toBeInTheDocument()
+    expect(within(nav).queryByRole('link', { name: 'Add book' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('banner')).queryByRole('navigation')).not.toBeInTheDocument()
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
   })
 
   it('shows the signed-in email on wide screens', async () => {

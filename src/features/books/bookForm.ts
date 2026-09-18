@@ -9,11 +9,17 @@ export interface BookFormValues {
   purchaseDate: string
   pricePaid: string
   marketPrice: string
+  /** All the book's category names, including archived ones the form doesn't show: saving must not drop them. */
+  categories: string[]
+  language: string
 }
 
-export const EMPTY_BOOK_FORM: BookFormValues = { title: '', author: '', purchaseDate: '', pricePaid: '', marketPrice: '' }
+export const EMPTY_BOOK_FORM: BookFormValues = { title: '', author: '', purchaseDate: '', pricePaid: '', marketPrice: '', categories: [], language: '' }
 
-export type BookFormErrors = Partial<Record<keyof BookFormValues, string>>
+/** The text fields of the form (everything but `categories`). */
+export type BookFormTextField = Exclude<keyof BookFormValues, 'categories'>
+
+export type BookFormErrors = Partial<Record<BookFormTextField, string>>
 
 /** "1,299.50" -> 1299.5; empty -> undefined; anything else (letters, negatives, 3 decimals) -> 'invalid'. */
 export function parseAmount(text: string): number | undefined | 'invalid' {
@@ -46,6 +52,8 @@ export function toNewBookInput(values: BookFormValues): NewBookInput {
     purchaseDate: values.purchaseDate.trim() || undefined,
     pricePaid: amount(values.pricePaid),
     marketPrice: amount(values.marketPrice),
+    categories: values.categories.length > 0 ? values.categories : undefined,
+    language: values.language.trim() || undefined,
   }
 }
 
@@ -56,7 +64,15 @@ export function valuesFromBook(book: Book): BookFormValues {
     purchaseDate: book.purchaseDate ?? '',
     pricePaid: book.pricePaid === undefined ? '' : String(book.pricePaid),
     marketPrice: book.marketPrice === undefined ? '' : String(book.marketPrice),
+    categories: book.categories ?? [],
+    language: book.language ?? '',
   }
+}
+
+/** Same names, ignoring order and case. */
+export function sameCategories(a: readonly string[], b: readonly string[]): boolean {
+  const key = (names: readonly string[]) => names.map((n) => n.trim().toLowerCase()).sort().join('\u0000')
+  return key(a) === key(b)
 }
 
 /** Only the fields that differ from the saved book; an emptied optional field becomes `null` (clear the cell). */
@@ -68,6 +84,8 @@ export function toBookPatch(values: BookFormValues, book: Book): BookPatch {
   if (next.purchaseDate !== book.purchaseDate) patch.purchaseDate = next.purchaseDate ?? null
   if (next.pricePaid !== book.pricePaid) patch.pricePaid = next.pricePaid ?? null
   if (next.marketPrice !== book.marketPrice) patch.marketPrice = next.marketPrice ?? null
+  if (!sameCategories(next.categories ?? [], book.categories ?? [])) patch.categories = next.categories ?? null
+  if (next.language !== book.language) patch.language = next.language ?? null
   return patch
 }
 

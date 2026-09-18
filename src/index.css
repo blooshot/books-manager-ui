@@ -78,13 +78,15 @@
   /* 16px controls on phones avoid iOS Safari's focus-zoom */
   input,
   select,
-  textarea {
+  textarea,
+  button[data-slot='select-trigger'] {
     font-size: var(--text-md);
   }
   @media (min-width: 768px) {
     input,
     select,
-    textarea {
+    textarea,
+    button[data-slot='select-trigger'] {
       font-size: var(--text-base);
     }
   }
@@ -104,6 +106,7 @@
 
 .bm-overlay { animation: bm-fade-in var(--duration-base) var(--ease); }
 .bm-dialog { animation: bm-dialog-in var(--duration-base) var(--ease); }
+.bm-popover { animation: bm-dialog-in var(--duration-base) var(--ease); }
 .bm-sheet { animation: bm-sheet-in var(--duration-slow) var(--ease); }
 .bm-accordion-content { overflow: hidden; }
 .bm-accordion-content[data-state='open'] { animation: bm-accordion-down var(--duration-base) var(--ease); }

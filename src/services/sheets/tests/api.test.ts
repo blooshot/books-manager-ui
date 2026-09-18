@@ -26,7 +26,7 @@ beforeEach(() => {
 const writes = () => sheets.calls.filter((c) => c.method !== 'GET')
 
 describe('readAll', () => {
-  it('reads both tabs in one request', async () => {
+  it('reads all four tabs in one request', async () => {
     sheets.tabs.Books.push(['B-0001', 'Dune', 'Herbert'])
     sheets.tabs.Borrowers.push(['B-0001', 'Ravi', '2026-02-01', '10:30', 'Office', 'No'])
     const data = await readAll(client())
@@ -34,6 +34,8 @@ describe('readAll', () => {
     expect(data.loans[0].borrowerName).toBe('Ravi')
     expect(sheets.calls).toHaveLength(1)
     expect(sheets.calls[0].url).toContain('valueRenderOption=FORMATTED_VALUE')
+    expect(sheets.calls[0].url.match(/ranges=/g)).toHaveLength(4)
+    expect(data.setup).toEqual({})
   })
 })
 
@@ -44,7 +46,7 @@ describe('appendBook', () => {
     expect(first.id).toBe('B-0001')
     expect(second.id).toBe('B-0002')
     expect(first.title).toBe('Dune')
-    expect(sheets.tabs.Books[1]).toEqual(['B-0001', 'Dune', 'Herbert', '', 500, '', '', NOW.toISOString()].map(String))
+    expect(sheets.tabs.Books[1]).toEqual(['B-0001', 'Dune', 'Herbert', '', 500, '', '', NOW.toISOString(), '', ''].map(String))
   })
 
   it('continues after the highest existing ID, including hand-added rows', async () => {
@@ -119,7 +121,7 @@ describe('updateBook', () => {
     await updateBook(client(), 'B-0001', { title: 'Dune Messiah', author: 'F. Herbert' })
     expect(sheets.tabs.Books[1][0]).toBe('B-0001')
     expect(sheets.tabs.Books[1][7]).toBe(NOW.toISOString())
-    expect(sheets.tabs.Books[2][8]).toBe('keep me')
+    expect(sheets.tabs.Books[2][10]).toBe('keep me')
   })
 
   it('clears a cell when the patch value is null', async () => {

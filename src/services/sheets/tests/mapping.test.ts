@@ -10,6 +10,13 @@ import {
   parseNumber,
   resolveColumns,
   BOOK_COLUMNS,
+  type BookField,
+  CATEGORIES_TAB,
+  OPTIONAL_BOOK_FIELDS,
+  joinNameList,
+  optionCells,
+  parseNameList,
+  parseOptions,
 } from '@/services/sheets/mapping'
 import { BOOK_HEADER, LOAN_HEADER } from '@/test/fakeSheets'
 
@@ -52,7 +59,7 @@ describe('escapeText', () => {
 
 describe('resolveColumns', () => {
   it('matches headers ignoring case and surrounding spaces', () => {
-    const { columns } = resolveColumns('Books', [' book id', 'TITLE', 'Author ', 'Purchase Date', 'Price paid', 'Current market price', 'Photo', 'Added at'], BOOK_COLUMNS)
+    const { columns } = resolveColumns('Books', [' book id', 'TITLE', 'Author ', 'Purchase Date', 'Price paid', 'Current market price', 'Photo', 'Added at', 'Categories', 'Language'], BOOK_COLUMNS)
     expect(columns.id).toBe(0)
     expect(columns.title).toBe(1)
     expect(columns.purchaseDate).toBe(3)
@@ -133,9 +140,67 @@ describe('buildRow', () => {
   it('places cells by column and pads to the header width', () => {
     const { columns, width } = resolveColumns('Books', ['Notes', ...BOOK_HEADER], BOOK_COLUMNS)
     const row = buildRow(columns, width, { id: 'B-0001', title: 'Dune' })
-    expect(row).toHaveLength(9)
+    expect(row).toHaveLength(11)
     expect(row[1]).toBe('B-0001')
     expect(row[2]).toBe('Dune')
     expect(row[0]).toBe('') // unknown column left empty
+  })
+})
+
+describe('optional Books columns', () => {
+  const OLD_HEADER = BOOK_HEADER.slice(0, 8)
+
+  it('a Sheet without Categories/Language still parses; those columns are -1 and the values empty', () => {
+    const table = parseBooks([OLD_HEADER, ['B-0001', 'Dune', 'Herbert']])
+    expect(table.columns.categories).toBe(-1)
+    expect(table.columns.language).toBe(-1)
+    expect(table.rows[0].value.categories).toBeUndefined()
+    expect(table.rows[0].value.language).toBeUndefined()
+  })
+
+  it('every other column is still required', () => {
+    expect(() => parseBooks([['Book ID', 'Title'], []])).toThrow(SheetSchemaError)
+    expect(() => resolveColumns('Books', ['Book ID'], BOOK_COLUMNS, OPTIONAL_BOOK_FIELDS)).toThrow(/Title, Author/)
+  })
+
+  it('buildRow leaves a missing optional column out instead of writing to index -1', () => {
+    const { columns, width } = resolveColumns<BookField>('Books', OLD_HEADER, BOOK_COLUMNS, OPTIONAL_BOOK_FIELDS)
+    const row = buildRow(columns, width, { id: 'B-0001', categories: 'Business', language: 'Hindi' })
+    expect(row).toHaveLength(8)
+    expect(row).not.toContain('Business')
+    expect(Object.keys(row)).not.toContain('-1')
+  })
+
+  it('reads categories and language from their columns', () => {
+    const table = parseBooks([BOOK_HEADER, ['B-0001', 'Dune', 'Herbert', '', '', '', '', '', ' Self-help,Business , ,self-HELP', 'Hindi']])
+    expect(table.rows[0].value.categories).toEqual(['Self-help', 'Business'])
+    expect(table.rows[0].value.language).toBe('Hindi')
+  })
+})
+
+describe('name lists', () => {
+  it('splits, trims, and drops blanks and repeats (ignoring case)', () => {
+    expect(parseNameList('a, B ,, b,c')).toEqual(['a', 'B', 'c'])
+    expect(parseNameList('')).toEqual([])
+    expect(joinNameList(['Self-help', 'Business'])).toBe('Self-help, Business')
+  })
+})
+
+describe('parseOptions', () => {
+  it('reads Name and Active by header; blank rows are skipped', () => {
+    const table = parseOptions(CATEGORIES_TAB, [['name', ' ACTIVE '], ['Business', 'Yes'], [], ['Old', 'No'], ['Typed by hand']])
+    expect(table.rows.map((r) => [r.row, r.value])).toEqual([
+      [2, { name: 'Business', active: true }],
+      [4, { name: 'Old', active: false }],
+      [5, { name: 'Typed by hand', active: true }], // no Active cell = active
+    ])
+  })
+
+  it('needs both columns', () => {
+    expect(() => parseOptions(CATEGORIES_TAB, [['Name']])).toThrow(/Active/)
+  })
+
+  it('writes Yes/No and protects text that looks like a formula', () => {
+    expect(optionCells({ name: '=1+1', active: false })).toEqual({ name: "'=1+1", active: 'No' })
   })
 })

@@ -19,6 +19,7 @@ import { bookSet, bookUpdated, booksLoaded } from '@/store/booksSlice'
 import { loanDiscarded, loanSet, loansLoaded } from '@/store/borrowersSlice'
 import { noticeAdded } from '@/store/noticesSlice'
 import { enqueue, SAVED_OFFLINE_NOTICE } from '@/store/outboxQueue'
+import { taxonomyLoaded } from '@/store/taxonomySlice'
 import { booksSelectors, selectOpenLoanByBookId } from '@/store/selectors'
 import type { RootState } from '@/store'
 import type { ThunkExtra } from '@/store/thunkExtra'
@@ -43,7 +44,7 @@ export type SavedBook = Book & { queued?: boolean }
 const titleOf = (getState: () => RootState) => (bookId: string) => booksSelectors.selectById(getState(), bookId)?.title
 
 /**
- * Load both tabs once and replace the store contents. Changes still waiting in the outbox are shown on top of
+ * Load all four tabs once and replace the store contents. Changes still waiting in the outbox are shown on top of
  * the loaded data, so a refresh never makes a pending change disappear from the screen.
  */
 export const loadAll = createAsyncThunk<void, void, ThunkConfig>(
@@ -53,6 +54,7 @@ export const loadAll = createAsyncThunk<void, void, ThunkConfig>(
     const { books, loans } = applyPending(loaded.books, loaded.loans, getState().outbox.entries)
     dispatch(booksLoaded(books))
     dispatch(loansLoaded(loans))
+    dispatch(taxonomyLoaded({ categories: loaded.categories, languages: loaded.languages, setup: loaded.setup }))
   },
 )
 

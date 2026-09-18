@@ -54,6 +54,8 @@ const FIELD_LABELS: Record<string, string> = {
   pricePaid: 'price paid',
   marketPrice: 'market price',
   photoUrl: 'photo',
+  categories: 'categories',
+  language: 'language',
 }
 
 /** One line for the pending list, e.g. `Lend “Dune” to Ravi`. `titleOf` looks up a book's title by ID. */

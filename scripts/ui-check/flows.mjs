@@ -4,6 +4,12 @@
  */
 import { BOOK_HEADER } from './stubs.mjs'
 
+const OLD_BOOK_HEADER = BOOK_HEADER.slice(0, 8)
+
+import { mkdirSync } from 'node:fs'
+
+const SHOTS = new URL('../../node_modules/.cache/ui-check/', import.meta.url).pathname
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function expect(condition, message) {
@@ -38,6 +44,21 @@ async function fill(page, labelPattern, text) {
   }, labelPattern.source)
   expect(id, `no field labelled ${labelPattern}`)
   await page.type(`[id="${id}"]`, text)
+}
+
+/** Opens a themed dropdown (Radix opens on a real mouse press) and picks the option with exactly this text. */
+async function choose(page, comboSelector, optionText, screenshotName) {
+  await page.$eval(comboSelector, (e) => e.scrollIntoView({ block: 'center' })) // not under the fixed bottom nav
+  await page.click(comboSelector)
+  await waitFor(page, (t) => [...document.querySelectorAll('[role=option]')].some((o) => o.textContent.trim() === t), optionText)
+  if (screenshotName) {
+    mkdirSync(SHOTS, { recursive: true })
+    await page.screenshot({ path: `${SHOTS}${screenshotName}.png` })
+  }
+  for (const handle of await page.$$('[role=option]')) {
+    if ((await handle.evaluate((e) => e.textContent.trim())) === optionText) return handle.click()
+  }
+  throw new Error(`no option "${optionText}"`)
 }
 
 const visibleButtons = (page) =>
@@ -155,7 +176,64 @@ export const flows = [
     },
   },
   {
-    name: 'phone width: Sign out and Sync are on screen, bottom nav (no sidebar); desktop width: sidebar (no bottom nav)',
+    name: 'categories and languages: add one, tag a book, filter and group by it, rename it, archive it',
+    async run({ page, open, world }) {
+      await open('#/categories')
+      await signIn(page)
+      await waitForText(page, 'Self-help')
+      await fill(page, /^New category/, 'Psychology')
+      await click(page, /^Add$/)
+      await waitFor(page, () => document.querySelector('[aria-label="Active categories"]')?.textContent.includes('Psychology'))
+      expectEqual(world.sheets.Categories.at(-1), ['Psychology', 'Yes'], 'row written to the Categories tab')
+
+      await page.evaluate(() => { location.hash = '#/books/B-0001/edit' })
+      await waitForText(page, 'Save changes')
+      await page.evaluate(() => [...document.querySelectorAll('label')].find((l) => l.textContent.trim() === 'Psychology').click())
+      await choose(page, 'button[role=combobox]', 'Hindi', 'dropdown-open')
+      await waitFor(page, () => document.querySelector('button[role=combobox]')?.textContent.trim() === 'Hindi')
+      await click(page, /^Save changes$/)
+      await waitForHash(page, '#/books/B-0001')
+      await waitForText(page, 'Self-help, Psychology')
+      expectEqual(world.sheets.Books[1].slice(8, 10), ['Self-help, Psychology', 'Hindi'], 'category and language cells')
+
+      await page.evaluate(() => { location.hash = '#/?group=category' })
+      await waitFor(page, () => [...document.querySelectorAll('h2')].some((h) => h.textContent.startsWith('Psychology')))
+      const headings = await page.evaluate(() => [...document.querySelectorAll('h2')].map((h) => h.textContent.replace(/\s+/g, ' ').trim()))
+      expectEqual(headings, ['Psychology 1', 'Self-help 1', 'Uncategorized 2'], 'group headings')
+
+      await page.evaluate(() => { location.hash = '#/categories' })
+      await waitFor(page, () => document.querySelector('[aria-label="Rename Psychology"]'))
+      await page.evaluate(() => document.querySelector('[aria-label="Rename Psychology"]').click())
+      await page.evaluate(() => { const box = document.querySelector('input[id$="-rename"]'); box.focus(); box.select() })
+      await page.keyboard.type('Mind')
+      await click(page, /^Save$/)
+      await waitFor(page, () => document.querySelector('[aria-label="Active categories"]')?.textContent.includes('Mind'))
+      expectEqual(world.sheets.Books[1][8], 'Self-help, Mind', 'the book follows the rename')
+
+      await page.evaluate(() => document.querySelector('[aria-label="Archive Mind"]').click())
+      await waitFor(page, () => document.querySelector('[aria-label="Restore Mind"]'))
+      expectEqual(world.sheets.Categories.find((r) => r[0] === 'Mind'), ['Mind', 'No'], 'archived, not removed')
+      expectEqual(world.sheets.Books[1][8], 'Self-help, Mind', 'the book keeps its text')
+      expect(world.writes.every((w) => !/delete|clear/i.test(w)), 'no delete or clear call was made')
+    },
+  },
+  {
+    name: 'an older Sheet (no Categories/Languages tabs or columns) still loads and says what to add',
+    async run({ page, open, world }) {
+      delete world.sheets.Categories
+      delete world.sheets.Languages
+      world.sheets.Books = world.sheets.Books.map((row, i) => (i === 0 ? OLD_BOOK_HEADER : row.slice(0, 8)))
+      await open('#/')
+      await signIn(page)
+      await waitForText(page, 'The Left Hand of Darkness')
+      expect(!(await page.evaluate(() => document.body.innerText.includes('Group by category'))), 'no category controls without categories')
+      await page.evaluate(() => { location.hash = '#/categories' })
+      await waitForText(page, 'Add a tab named "Categories"')
+      await waitForText(page, 'Add a tab named "Languages"')
+    },
+  },
+  {
+    name: 'phone width: Sign out and Sync are on screen, bottom nav; desktop width: header menu and a card grid (no sidebar, no bottom nav, no table)',
     async run({ page, open }) {
       await open('#/', { width: 390, height: 844 })
       await signIn(page)
@@ -172,9 +250,25 @@ export const flows = [
       expect(!controls.includes('Refresh'), 'the list should not have a second, look-alike Refresh button')
 
       await page.setViewport({ width: 1280, height: 800 })
-      await waitFor(page, () => document.querySelector('aside'))
-      const desktop = await page.evaluate(() => ({ sidebar: Boolean(document.querySelector('aside')), bottomNav: Boolean(document.querySelector('nav[aria-label=Main].fixed')), table: Boolean(document.querySelector('table')) }))
-      expectEqual(desktop, { sidebar: true, bottomNav: false, table: true }, 'desktop layout')
+      await waitFor(page, () => document.querySelector('header nav[aria-label=Main]'))
+      const desktop = await page.evaluate(() => ({
+        sidebar: Boolean(document.querySelector('aside')),
+        bottomNav: Boolean(document.querySelector('nav[aria-label=Main].fixed')),
+        table: Boolean(document.querySelector('table')),
+        headerLinks: [...document.querySelectorAll('header nav[aria-label=Main] a')].map((a) => a.textContent.trim()),
+        cards: document.querySelectorAll('ul[aria-label=Books] > li').length,
+        sideScroll: document.documentElement.scrollWidth > window.innerWidth,
+      }))
+      expectEqual(desktop.headerLinks, ['Books', 'Lent out', 'Categories', 'Add book'], 'header menu')
+      expectEqual({ ...desktop, headerLinks: undefined, cards: desktop.cards > 0 }, { sidebar: false, bottomNav: false, table: false, headerLinks: undefined, cards: true, sideScroll: false }, 'desktop layout')
+      // A very wide monitor: the header and the page stay in one centred column instead of stretching to the edges.
+      await page.setViewport({ width: 2560, height: 1200 })
+      const wide = await page.evaluate(() => {
+        const box = (selector) => document.querySelector(selector).getBoundingClientRect()
+        return { header: Math.round(box('header > div').width), main: Math.round(box('main').width) }
+      })
+      expect(wide.header <= 1152 && wide.main <= 1152, `content column should stay at most 1152px wide on a 2560px screen, got ${JSON.stringify(wide)}`)
+      await page.setViewport({ width: 1280, height: 800 })
       expectEqual(await boxInViewport(page, /^Sign out$/), true, 'Sign out inside the desktop viewport')
     },
   },

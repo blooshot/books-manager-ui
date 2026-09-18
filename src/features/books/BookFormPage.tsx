@@ -12,8 +12,10 @@ import {
   validateBookForm,
   valuesFromBook,
   type BookFormErrors,
+  type BookFormTextField,
   type BookFormValues,
 } from '@/features/books/bookForm'
+import { CategoryField, LanguageField } from '@/features/books/OptionFields'
 import { PhotoField } from '@/features/books/PhotoField'
 import { useFormDraft } from '@/features/books/useFormDraft'
 import { config } from '@/lib/config'
@@ -52,7 +54,7 @@ function BookForm({ book }: { book?: Book }) {
   const duplicate = findDuplicate(books, values.title, values.author, book?.id)
   const backTo = book ? `/books/${book.id}` : '/'
 
-  const set = (field: keyof BookFormValues) => (event: { target: { value: string } }) =>
+  const set = (field: BookFormTextField) => (event: { target: { value: string } }) =>
     setValues((current) => ({ ...current, [field]: event.target.value }))
 
   async function submit(event: FormEvent) {
@@ -128,6 +130,9 @@ function BookForm({ book }: { book?: Book }) {
           <Input inputMode="decimal" value={values.marketPrice} onChange={set('marketPrice')} disabled={saving} className="font-mono" />
         </FormField>
       </div>
+
+      <CategoryField value={values.categories} onChange={(categories) => setValues((current) => ({ ...current, categories }))} disabled={saving} />
+      <LanguageField value={values.language} onChange={(language) => setValues((current) => ({ ...current, language }))} disabled={saving} />
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Cover photo</legend>

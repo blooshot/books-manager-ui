@@ -1,24 +1,33 @@
 import { formatDate, formatTime } from '@/lib/datetime'
-import type { Book, Loan } from '@/types/library'
+import type { Book, ListOption, Loan, OptionList } from '@/types/library'
 import type { SheetsClient } from '@/services/sheets/client'
 import {
   AlreadyBorrowedError,
   BookNotFoundError,
   NotBorrowedError,
+  SheetSchemaError,
+  SheetTabMissingError,
   ValidationError,
 } from '@/services/sheets/errors'
 import { nextBookId } from '@/services/sheets/ids'
 import {
+  BOOK_COLUMNS,
   BOOKS_TAB,
   BORROWERS_TAB,
+  CATEGORIES_TAB,
+  LANGUAGES_TAB,
   bookCells,
   buildRow,
   cellAddress,
   escapeText,
+  joinNameList,
   loanCells,
   loanKey,
+  optionCells,
   parseBooks,
   parseLoans,
+  parseNameList,
+  parseOptions,
   type Cell,
   type ParsedRow,
 } from '@/services/sheets/mapping'
@@ -41,14 +50,58 @@ export interface WriteOptions {
 export interface LibraryData {
   books: Book[]
   loans: Loan[]
+  categories: ListOption[]
+  languages: ListOption[]
+  /** For each list that cannot be used yet, what the owner has to add to the Sheet. Absent = ready. */
+  setup: Partial<Record<OptionList, string>>
 }
 
+const OPTION_TABS: Record<OptionList, string> = { categories: CATEGORIES_TAB, languages: LANGUAGES_TAB }
+/** The Books column that holds each list's value. */
+const OPTION_BOOK_FIELD = { categories: 'categories', languages: 'language' } as const
+const OPTION_LABELS: Record<OptionList, string> = { categories: 'Category', languages: 'Language' }
+
+/**
+ * One `batchGet` of all four tabs. The `Categories` and `Languages` tabs (and the two new `Books` columns) may not
+ * exist yet in an older Sheet; then the request is repeated without the missing tabs and `setup` says what to add.
+ * `Books` and `Borrowers` stay required.
+ */
 export async function readAll(client: SheetsClient): Promise<LibraryData> {
-  const [booksValues, loansValues] = await client.batchGet([BOOKS_TAB, BORROWERS_TAB])
-  return {
-    books: parseBooks(booksValues).rows.map((r) => r.value),
-    loans: parseLoans(loansValues).rows.map((r) => r.value),
+  const missingTabs = new Set<string>()
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const optionTabs = Object.values(OPTION_TABS).filter((tab) => !missingTabs.has(tab))
+    let values: string[][][]
+    try {
+      values = await client.batchGet([BOOKS_TAB, BORROWERS_TAB, ...optionTabs])
+    } catch (error) {
+      if (error instanceof SheetTabMissingError && optionTabs.includes(error.tab)) {
+        missingTabs.add(error.tab)
+        continue
+      }
+      throw error
+    }
+    const books = parseBooks(values[0])
+    const setup: LibraryData['setup'] = {}
+    const options = {} as Record<OptionList, ListOption[]>
+    for (const list of ['categories', 'languages'] as const) {
+      const tab = OPTION_TABS[list]
+      const position = optionTabs.indexOf(tab)
+      const tabValues = position === -1 ? undefined : values[2 + position]
+      options[list] = tabValues ? parseOptions(tab, tabValues).rows.map((r) => r.value) : []
+      if (!tabValues) setup[list] = `Add a tab named "${tab}" with the header row Name, Active. See README > Sheet setup.`
+      else if (books.columns[OPTION_BOOK_FIELD[list]] === -1) {
+        setup[list] = `Add a "${BOOK_COLUMNS[OPTION_BOOK_FIELD[list]]}" column to the Books tab. See README > Sheet setup.`
+      }
+    }
+    return {
+      books: books.rows.map((r) => r.value),
+      loans: parseLoans(values[1]).rows.map((r) => r.value),
+      categories: options.categories,
+      languages: options.languages,
+      setup,
+    }
   }
+  throw new SheetTabMissingError(CATEGORIES_TAB)
 }
 
 export interface NewBookInput {
@@ -58,12 +111,22 @@ export interface NewBookInput {
   pricePaid?: number
   marketPrice?: number
   photoUrl?: string
+  categories?: string[]
+  language?: string
 }
 
 function requireText(value: string | undefined, label: string): string {
   const trimmed = (value ?? '').trim()
   if (trimmed === '') throw new ValidationError(`${label} is required.`)
   return trimmed
+}
+
+/** Refuses to write a value into a Books column this Sheet doesn't have yet, since it would be lost without a word. */
+function requireBookColumns(columns: { categories: number; language: number }, wants: { categories?: unknown[]; language?: unknown }): void {
+  const missing: string[] = []
+  if (wants.categories?.length && columns.categories === -1) missing.push(BOOK_COLUMNS.categories)
+  if (wants.language && columns.language === -1) missing.push(BOOK_COLUMNS.language)
+  if (missing.length > 0) throw new SheetSchemaError(BOOKS_TAB, missing)
 }
 
 /**
@@ -85,6 +148,7 @@ export async function appendBook(
   const author = requireText(input.author, 'Author')
   const [values] = await client.batchGet([BOOKS_TAB])
   const table = parseBooks(values)
+  requireBookColumns(table.columns, input)
   if (options.idempotent) {
     // A retry of a write that may already have gone through (e.g. the response was lost): `Added at` is the key.
     const already = table.rows.find((r) => r.value.addedAt === now.toISOString() && r.value.title === title)
@@ -101,6 +165,8 @@ export async function appendBook(
     marketPrice: input.marketPrice,
     photoUrl: uploadedPhotoUrl ?? (input.photoUrl || undefined),
     addedAt: now.toISOString(),
+    categories: input.categories?.length ? parseNameList(input.categories.join(',')) : undefined,
+    language: input.language?.trim() || undefined,
   }
   await client.append(BOOKS_TAB, buildRow(table.columns, table.width, bookCells(book)))
   return book
@@ -114,6 +180,9 @@ export interface BookPatch {
   pricePaid?: number | null
   marketPrice?: number | null
   photoUrl?: string | null
+  /** An empty array or `null` clears the cell. */
+  categories?: string[] | null
+  language?: string | null
 }
 
 /** Writes only the changed cells, so columns the app doesn't know about are never overwritten. */
@@ -127,6 +196,7 @@ export async function updateBook(client: SheetsClient, bookId: string, patch: Bo
   const updates: { range: string; value: Cell }[] = []
   const set = <K extends keyof BookPatch>(field: K, cellValue: Cell, apply: () => void) => {
     if (patch[field] === undefined) return
+    if (table.columns[field] === -1) throw new SheetSchemaError(BOOKS_TAB, [BOOK_COLUMNS[field]])
     apply()
     updates.push({ range: cellAddress(BOOKS_TAB, table.columns[field], found.row), value: cellValue })
   }
@@ -144,8 +214,98 @@ export async function updateBook(client: SheetsClient, bookId: string, patch: Bo
   set('marketPrice', patch.marketPrice ?? '', () => (merged.marketPrice = patch.marketPrice ?? undefined))
   set('photoUrl', patch.photoUrl ? escapeText(patch.photoUrl) : '', () => (merged.photoUrl = patch.photoUrl || undefined))
 
+  const categories = patch.categories ? parseNameList(patch.categories.join(',')) : []
+  set('categories', joinNameList(categories) ? escapeText(joinNameList(categories)) : '', () => (merged.categories = categories.length > 0 ? categories : undefined))
+  set('language', patch.language ? escapeText(patch.language.trim()) : '', () => (merged.language = patch.language?.trim() || undefined))
+
   if (updates.length > 0) await client.batchUpdate(updates)
   return merged
+}
+
+const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
+
+function cleanOptionName(raw: string, list: OptionList): string {
+  const name = raw.trim().replace(/\s+/g, ' ')
+  const label = OPTION_LABELS[list]
+  if (name === '') throw new ValidationError(`${label} name is required.`)
+  if (name.length > 60) throw new ValidationError(`${label} name is too long (60 characters at most).`)
+  if (name.includes(',')) throw new ValidationError(`${label} names cannot contain commas.`)
+  return name
+}
+
+/**
+ * Adds a category or language. A name that exists but was archived is restored instead of added twice.
+ * There is no delete: archiving sets Active to No (ADR-0008, on top of ADR-0004).
+ */
+export async function addOption(client: SheetsClient, list: OptionList, rawName: string): Promise<ListOption> {
+  const name = cleanOptionName(rawName, list)
+  const tab = OPTION_TABS[list]
+  const [values] = await client.batchGet([tab])
+  const table = parseOptions(tab, values)
+  const existing = table.rows.find((r) => sameName(r.value.name, name))
+  if (existing) {
+    if (existing.value.active) throw new ValidationError(`${OPTION_LABELS[list]} "${existing.value.name}" already exists.`)
+    await client.batchUpdate([{ range: cellAddress(tab, table.columns.active, existing.row), value: 'Yes' }])
+    return { name: existing.value.name, active: true }
+  }
+  const option: ListOption = { name, active: true }
+  await client.append(tab, buildRow(table.columns, table.width, optionCells(option)))
+  return option
+}
+
+/**
+ * Renames a category or language, and the same text on every book that has it, in one `values:batchUpdate`.
+ * Safe to repeat: if the list row is already renamed, the books are still swept.
+ */
+export async function renameOption(client: SheetsClient, list: OptionList, rawFrom: string, rawTo: string): Promise<ListOption> {
+  const to = cleanOptionName(rawTo, list)
+  const from = rawFrom.trim()
+  const tab = OPTION_TABS[list]
+  const [optionValues, bookValues] = await client.batchGet([tab, BOOKS_TAB])
+  const options = parseOptions(tab, optionValues)
+  const books = parseBooks(bookValues)
+
+  const fromRow = options.rows.find((r) => r.value.name === from) ?? options.rows.find((r) => sameName(r.value.name, from))
+  // With no `from` row, `to` already existing means an earlier attempt renamed it: not a clash, just finish the books.
+  const clash = fromRow ? options.rows.find((r) => r !== fromRow && sameName(r.value.name, to)) : undefined
+  if (clash) throw new ValidationError(`${OPTION_LABELS[list]} "${clash.value.name}" already exists.`)
+  if (!fromRow && !options.rows.some((r) => sameName(r.value.name, to))) {
+    throw new ValidationError(`${OPTION_LABELS[list]} "${from}" was not found.`)
+  }
+
+  const updates: { range: string; value: Cell }[] = []
+  if (fromRow && fromRow.value.name !== to) {
+    updates.push({ range: cellAddress(tab, options.columns.name, fromRow.row), value: escapeText(to) })
+  }
+  const field = OPTION_BOOK_FIELD[list]
+  if (books.columns[field] !== -1) {
+    for (const { row, value } of books.rows) {
+      if (list === 'categories') {
+        const names = value.categories ?? []
+        if (!names.some((n) => sameName(n, from))) continue
+        const renamed = parseNameList(names.map((n) => (sameName(n, from) ? to : n)).join(','))
+        if (renamed.join(', ') === names.join(', ')) continue
+        updates.push({ range: cellAddress(BOOKS_TAB, books.columns.categories, row), value: escapeText(renamed.join(', ')) })
+      } else if (value.language && sameName(value.language, from) && value.language !== to) {
+        updates.push({ range: cellAddress(BOOKS_TAB, books.columns.language, row), value: escapeText(to) })
+      }
+    }
+  }
+  if (updates.length > 0) await client.batchUpdate(updates)
+  return { name: to, active: fromRow?.value.active ?? true }
+}
+
+/** Archive (`active: false`) or restore. Nothing is deleted, and books keep their text. */
+export async function setOptionActive(client: SheetsClient, list: OptionList, name: string, active: boolean): Promise<ListOption> {
+  const tab = OPTION_TABS[list]
+  const [values] = await client.batchGet([tab])
+  const table = parseOptions(tab, values)
+  const found = table.rows.find((r) => sameName(r.value.name, name))
+  if (!found) throw new ValidationError(`${OPTION_LABELS[list]} "${name.trim()}" was not found.`)
+  if (found.value.active !== active) {
+    await client.batchUpdate([{ range: cellAddress(tab, table.columns.active, found.row), value: active ? 'Yes' : 'No' }])
+  }
+  return { name: found.value.name, active }
 }
 
 export interface NewLoanInput {

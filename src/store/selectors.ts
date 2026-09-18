@@ -43,3 +43,13 @@ export const selectLentOutByBorrower = createSelector(
     return [...groups.values()].sort((a, b) => a.borrowerName.localeCompare(b.borrowerName))
   },
 )
+
+const byName = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' })
+
+/** Names offered in pickers and filters: active entries, A to Z. Archived ones are hidden but kept in the Sheet. */
+export const selectActiveCategories = createSelector([(state: RootState) => state.taxonomy.categories], (options) =>
+  options.filter((o) => o.active).map((o) => o.name).sort(byName),
+)
+export const selectActiveLanguages = createSelector([(state: RootState) => state.taxonomy.languages], (options) =>
+  options.filter((o) => o.active).map((o) => o.name).sort(byName),
+)

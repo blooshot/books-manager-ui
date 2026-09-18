@@ -48,7 +48,7 @@ describe('guard patterns', () => {
 })
 
 describe('Sheets endpoint allow-list (ADR-0004)', () => {
-  const servicesDir = path.resolve(import.meta.dirname, '..', 'services')
+  const servicesDir = path.resolve(import.meta.dirname, '..', '..', 'services')
   const source = sourceFiles(servicesDir).map((f) => readFileSync(f, 'utf8')).join('\n')
 
   it('only calls values:batchGet, values:batchUpdate and :append', () => {
@@ -60,7 +60,7 @@ describe('Sheets endpoint allow-list (ADR-0004)', () => {
 })
 
 describe('Drive endpoint allow-list (ADR-0004)', () => {
-  const driveDir = path.resolve(import.meta.dirname, '..', 'services', 'drive')
+  const driveDir = path.resolve(import.meta.dirname, '..', '..', 'services', 'drive')
   const source = sourceFiles(driveDir).map((f) => readFileSync(f, 'utf8')).join('\n')
 
   it('only uses GET (default), POST and PATCH', () => {
@@ -76,7 +76,7 @@ describe('Drive endpoint allow-list (ADR-0004)', () => {
 })
 
 describe('append-only guard (ADR-0004)', () => {
-  const files = sourceFiles(path.resolve(import.meta.dirname, '..'))
+  const files = sourceFiles(path.resolve(import.meta.dirname, '..', '..'))
 
   it('scans some source files', () => {
     expect(files.length).toBeGreaterThan(5)

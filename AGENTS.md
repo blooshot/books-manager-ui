@@ -17,8 +17,8 @@ plus a borrower log (who has a book, since when, where).
   `.agents/ui/skills/custom-ui-design-system/` (see "Design system" below).
 - **State:** Redux Toolkit — entity adapters, thunks, selectors (ADR-0006).
   Data is loaded once and read from the store.
-- **Data store:** Google Sheets. One spreadsheet, two tabs (`Books`, `Borrowers`).
-  There is no separate database.
+- **Data store:** Google Sheets. One spreadsheet, four tabs (`Books`, `Borrowers`,
+  and the `Categories` and `Languages` lists). There is no separate database.
 - **Auth:** Google Identity Services token client (OAuth 2.0), directly in the
   browser. Scopes: `spreadsheets` + `drive.file`, plus the non-sensitive
   `userinfo.email` (only used for the "Continue as <email>" hint).
@@ -86,6 +86,18 @@ hand-typed and app-written values read back identically.
 | Current market price | Manually entered for now (see Open questions) |
 | Photo | Google Drive file link for the cover; empty = placeholder cover |
 | Added at | ISO timestamp, audit only |
+| Categories | Category names joined by `, ` (a book can have several). Optional column: an older Sheet without it still works. Names never contain a comma |
+| Language | One language name. Optional column, like Categories |
+
+### `Categories` and `Languages` tabs
+Same shape, one row per entry (optional tabs: without them the app works and says what to add). ADR-0008.
+
+| Column | Notes |
+|---|---|
+| Name | Unique ignoring case; no commas; at most 60 characters |
+| Active | Yes/No. **"Delete" archives**: set to No, never remove the row. A row with no value counts as active |
+
+Books hold these names as text, so archiving changes nothing on a book and a rename updates the same text on every book.
 
 ### `Borrowers` tab
 One row per loan.
@@ -107,8 +119,8 @@ A book that is already out cannot be borrowed again.
 
 ## Data flow
 
-1. **Load once** at startup with a single `batchGet` of both tabs into the
-   Redux store. Search, filters, status, and the lent-out grouping are
+1. **Load once** at startup with a single `batchGet` of all four tabs into the
+   Redux store (repeated without any of the two list tabs that don't exist yet). Search, filters, status, and the lent-out grouping are
    selectors over the store — no API calls.
 2. **Write-through, optimistic.** Every add/edit/borrow/return updates the
    store immediately and fires the Sheets call right away; on failure the
@@ -124,6 +136,8 @@ A book that is already out cannot be borrowed again.
    non-blocking "Session expired — Reconnect" banner, then retry the pending
    action automatically. A 401 means the write did not happen, so retrying
    is safe. Sign-out revokes the token.
+   Category and language *list* changes (add, rename, archive, restore) are
+   the exception: they wait for the Sheet and are not queued (ADR-0008).
 6. **Drafts.** Add/edit form fields are mirrored to `sessionStorage` (no
    tokens, no photo) so a reload doesn't lose them. The whole store is not
    persisted.
@@ -146,17 +160,21 @@ A book that is already out cannot be borrowed again.
    return to where you were heading (home after a deliberate sign-out). **Sign
    out** is in the header on every screen, instant, and asks first if changes
    have not reached the Sheet; "wrong account" message on a 403 from the Sheet
-2. Book list — cover thumbnail, title, author, available/borrowed badge.
-   Table on desktop, cards on phone
+2. Book list — cover thumbnail, title, author, available/borrowed badge, sortable
+   by purchase date. Product-style card grid on desktop, list cards on phone. On
+   desktop the header menu holds Books, Lent out and Add book (the sidebar is built
+   but hidden)
 3. Book detail — full metadata + that book's borrow history (activity feed)
 4. Add / Edit book form — shared form; Book ID read-only; photo optional;
    soft duplicate-title warning (does not block)
 5. Borrow / return — name (autocomplete), date/time (default now), place;
    return is one tap with date/time defaulting to now. Dialog on desktop,
    bottom Sheet on phone
-6. Search / filter by title, author, or status (client-side)
+6. Search / filter by title, author, status, category or language, group by
+   category, sort by purchase date (client-side)
 7. Lent out — grouped by borrower (Accordion): who holds which books, since when
 8. Pending changes — what is waiting to be sent (retry / discard failed ones)
+9. Categories & languages — add, rename, archive and restore the two lists
 
 The app must work equally well on phone and desktop.
 
@@ -220,7 +238,7 @@ The **repo is the only shared memory** — nothing that matters lives only in a 
 - **Coding rules for every tool** are in `conductor/code_styleguides/` (TypeScript, testing, Google APIs) and
   `conductor/lessons-learned.md`. This file and the ADRs win if they disagree.
 - **Never silently:** delete files, skip or weaken tests (including
-  `src/test/no-delete.test.ts`), or put secrets/tokens in storage or the repo.
+  `src/test/tests/no-delete.test.ts`), or put secrets/tokens in storage or the repo.
 
 ## Notes on `.agents/ui`
 
@@ -240,3 +258,4 @@ above:
 - `0005-react-vite-not-nextjs.md`
 - `0006-write-through-outbox-sync.md`
 - `0007-drive-scope-and-photo-pipeline.md`
+- `0008-categories-and-languages.md`

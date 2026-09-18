@@ -42,7 +42,7 @@ describe('book detail', () => {
   it('shows dashes for empty fields and a placeholder cover', async () => {
     renderApp({ sheets: library(), route: '/books/B-0003' })
     await screen.findByRole('heading', { name: 'Anathem' })
-    expect(screen.getAllByText('—')).toHaveLength(4)
+    expect(screen.getAllByText('—')).toHaveLength(6) // purchase date, both prices, added, categories, language
     expect(screen.getByRole('img', { name: 'No cover for Anathem' })).toBeInTheDocument()
     expect(screen.getByText('Available')).toBeInTheDocument()
   })

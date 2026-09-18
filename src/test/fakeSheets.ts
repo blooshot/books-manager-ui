@@ -17,7 +17,10 @@ export const BOOK_HEADER = [
   'Current market price',
   'Photo',
   'Added at',
+  'Categories',
+  'Language',
 ]
+export const OPTION_HEADER = ['Name', 'Active']
 export const LOAN_HEADER = [
   'Book ID',
   'Borrower name',
@@ -46,10 +49,12 @@ export class FakeSheets {
   /** Set to make the next request with this HTTP method fail (e.g. only the append/upload/rename). */
   failNextMethod?: { method: string; status: number }
 
-  constructor(tabs?: Partial<Record<'Books' | 'Borrowers', string[][]>>) {
+  constructor(tabs?: Partial<Record<'Books' | 'Borrowers' | 'Categories' | 'Languages', string[][]>>) {
     this.tabs = {
       Books: tabs?.Books ?? [BOOK_HEADER],
       Borrowers: tabs?.Borrowers ?? [LOAN_HEADER],
+      Categories: tabs?.Categories ?? [OPTION_HEADER],
+      Languages: tabs?.Languages ?? [OPTION_HEADER],
     }
   }
 

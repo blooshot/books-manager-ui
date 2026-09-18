@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { BookFormValues } from '@/features/books/bookForm'
+import type { BookFormTextField, BookFormValues } from '@/features/books/bookForm'
 import { readSession, removeSession, writeSession } from '@/lib/storage'
 
-const FIELDS: (keyof BookFormValues)[] = ['title', 'author', 'purchaseDate', 'pricePaid', 'marketPrice']
+const TEXT_FIELDS: BookFormTextField[] = ['title', 'author', 'purchaseDate', 'pricePaid', 'marketPrice', 'language']
 
 /** A stored draft is used only if it has exactly the form's fields, all strings (it is untrusted input). */
 function readDraft(key: string): BookFormValues | null {
@@ -12,14 +12,17 @@ function readDraft(key: string): BookFormValues | null {
     const parsed: unknown = JSON.parse(raw)
     if (typeof parsed !== 'object' || parsed === null) return null
     const record = parsed as Record<string, unknown>
-    if (!FIELDS.every((field) => typeof record[field] === 'string')) return null
-    return Object.fromEntries(FIELDS.map((field) => [field, record[field] as string])) as unknown as BookFormValues
+    if (!TEXT_FIELDS.every((field) => typeof record[field] === 'string')) return null
+    const { categories } = record
+    if (!Array.isArray(categories) || !categories.every((name) => typeof name === 'string')) return null
+    return { ...(Object.fromEntries(TEXT_FIELDS.map((field) => [field, record[field] as string])) as Record<BookFormTextField, string>), categories: categories as string[] }
   } catch {
     return null
   }
 }
 
-const sameValues = (a: BookFormValues, b: BookFormValues) => FIELDS.every((field) => a[field] === b[field])
+const sameValues = (a: BookFormValues, b: BookFormValues) =>
+  TEXT_FIELDS.every((field) => a[field] === b[field]) && a.categories.length === b.categories.length && a.categories.every((name, i) => name === b.categories[i])
 
 /**
  * Form values mirrored to sessionStorage so a reload doesn't lose them. Fields only: no photo, no token.

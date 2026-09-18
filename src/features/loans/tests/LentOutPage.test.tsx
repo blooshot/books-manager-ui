@@ -93,7 +93,7 @@ describe('Lent out screen', () => {
 })
 
 describe('navigation to Lent out', () => {
-  it('is in the bottom nav on phones and the sidebar on desktop, marked when current', async () => {
+  it('is in the bottom nav on phones and the header menu on desktop, marked when current', async () => {
     const phone = renderApp({ route: '/', sheets: library(), viewport: 'phone' })
     await phone.user.click(await screen.findByRole('link', { name: 'Lent out' }))
     expect(await screen.findByRole('heading', { name: 'Lent out' })).toBeInTheDocument()

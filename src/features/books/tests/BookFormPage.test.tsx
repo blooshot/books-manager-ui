@@ -259,7 +259,7 @@ describe('unsaved drafts', () => {
     await pickPhoto(user)
     await screen.findByRole('img', { name: 'Selected cover' })
     const stored = sessionStorage.getItem(DRAFT_KEY) ?? ''
-    expect(Object.keys(JSON.parse(stored)).sort()).toEqual(['author', 'marketPrice', 'pricePaid', 'purchaseDate', 'title'])
+    expect(Object.keys(JSON.parse(stored)).sort()).toEqual(['author', 'categories', 'language', 'marketPrice', 'pricePaid', 'purchaseDate', 'title'])
     expect(stored).not.toContain('test-token')
   })
 
