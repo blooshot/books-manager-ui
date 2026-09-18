@@ -1,12 +1,17 @@
-import { SessionExpiredError, DriveError, DrivePermissionError } from './errors'
+import { DriveError, DrivePermissionError, SessionExpiredError } from '@/services/drive/errors'
 
+/**
+ * Thin Drive v3 client. Only the calls the cover pipeline needs go through it:
+ * find (list), create (folder, multipart upload), get (metadata / media) and update (rename).
+ * Nothing here deletes or trashes (ADR-0004); src/test/no-delete.test.ts enforces it.
+ */
 export interface DriveClientOptions {
   /** Must throw SessionExpiredError when there is no valid token. */
   getAccessToken: () => string
   fetchImpl?: typeof fetch
 }
 
-export type DriveClient = {
+export interface DriveClient {
   request<T>(path: string, init?: RequestInit): Promise<T>
   requestBlob(path: string, init?: RequestInit): Promise<Blob>
 }
@@ -32,19 +37,20 @@ export function createDriveClient({ getAccessToken, fetchImpl }: DriveClientOpti
 
   async function execute(path: string, init: RequestInit = {}): Promise<Response> {
     const token = getAccessToken()
-    let response: Response
-    const isUpload = path.startsWith('/upload/')
-    const base = isUpload ? UPLOAD_BASE : BASE
-    const url = path.startsWith('http') ? path : `${base}${path.replace(/^\/upload/, '')}`
+    const url = path.startsWith('/upload/')
+      ? `${UPLOAD_BASE}${path.slice('/upload'.length)}`
+      : `${BASE}${path}`
 
+    const headers = new Headers(init.headers)
+    headers.set('Authorization', `Bearer ${token}`)
+    // Drive rejects or misreads a JSON body sent as text/plain (fetch's default for strings).
+    if (typeof init.body === 'string' && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json')
+    }
+
+    let response: Response
     try {
-      response = await doFetch(url, {
-        ...init,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          ...init.headers,
-        },
-      })
+      response = await doFetch(url, { ...init, headers })
     } catch {
       throw new DriveError('Network error: could not reach Google Drive.')
     }

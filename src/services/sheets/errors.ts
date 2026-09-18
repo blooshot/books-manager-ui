@@ -1,26 +1,13 @@
 /** Errors raised by the Sheets service layer. Names are stable so they survive Redux serialization. */
 
-export class SheetsError extends Error {
-  /** HTTP status when the failure came from the API; undefined for network failures. */
-  status?: number
-  /**
-   * `'401'`, `'500'`, ... or `'NETWORK'`. Redux Toolkit serializes thunk errors and keeps only
-   * name/message/stack/code, so this is how callers (and the outbox) tell failures apart.
-   */
-  code: string
-  constructor(message: string, status?: number) {
-    super(message)
-    this.name = 'SheetsError'
-    this.status = status
-    this.code = status === undefined ? 'NETWORK' : String(status)
-  }
-}
+import { GoogleApiError, SessionExpiredError } from '@/services/google/errors'
 
-/** 401: the access token is missing or expired. The write did not happen, so retrying is safe. */
-export class SessionExpiredError extends SheetsError {
-  constructor(message = 'Your Google session has expired. Reconnect to continue.') {
-    super(message, 401)
-    this.name = 'SessionExpiredError'
+export { SessionExpiredError }
+
+export class SheetsError extends GoogleApiError {
+  constructor(message: string, status?: number) {
+    super(message, status)
+    this.name = 'SheetsError'
   }
 }
 

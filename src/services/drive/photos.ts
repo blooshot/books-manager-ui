@@ -1,38 +1,29 @@
-import type { DriveClient } from './client'
+import type { DriveClient } from '@/services/drive/client'
+import { buildMultipartRelated } from '@/services/drive/multipart'
 
-export async function uploadCover(
-  client: DriveClient,
-  file: Blob,
-  bookId: string,
-  folderId: string
-): Promise<string> {
-  const metadata = {
-    name: `${bookId}.jpg`,
-    parents: [folderId],
-  }
-
-  const form = new FormData()
-  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }))
-  form.append('file', file)
-
-  const result = await client.request<{ id: string }>('/upload/files?uploadType=multipart', {
+/** Uploads a cover (already resized JPEG) into the covers folder and returns the new Drive file ID. */
+export async function uploadCover(client: DriveClient, file: Blob, bookId: string, folderId: string): Promise<string> {
+  const { body, contentType } = buildMultipartRelated({ name: `${bookId}.jpg`, parents: [folderId] }, file, 'image/jpeg')
+  const result = await client.request<{ id: string }>('/upload/files?uploadType=multipart&fields=id', {
     method: 'POST',
-    body: form,
+    headers: { 'Content-Type': contentType },
+    body,
   })
-
   return result.id
 }
 
-export async function fetchCoverBlob(client: DriveClient, fileId: string): Promise<Blob> {
-  return await client.requestBlob(`/files/${fileId}?alt=media`)
+/** Downloads a cover's bytes. `<img>` can't send a Bearer token, so covers are fetched as blobs. */
+export function fetchCoverBlob(client: DriveClient, fileId: string): Promise<Blob> {
+  return client.requestBlob(`/files/${encodeURIComponent(fileId)}?alt=media`)
 }
 
+/**
+ * ADR-0004: a replaced cover is renamed for the owner to delete by hand, never deleted or trashed.
+ * The request body carries only `name`; do not add other fields (e.g. `trashed`).
+ */
 export async function markReplaced(client: DriveClient, fileId: string, bookId: string): Promise<void> {
-  // ADR-0004: We rename instead of deleting.
-  await client.request(`/files/${fileId}`, {
+  await client.request(`/files/${encodeURIComponent(fileId)}?fields=id`, {
     method: 'PATCH',
-    body: JSON.stringify({
-      name: `deleted-file-${bookId}.jpg`,
-    }),
+    body: JSON.stringify({ name: `deleted-file-${bookId}.jpg` }),
   })
 }

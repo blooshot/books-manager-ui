@@ -1,49 +1,33 @@
 /**
- * Google Drive sharing links usually look like:
- * https://drive.google.com/file/d/1aBcDeFgHiJkLmNoPqRsTuVwXyZ/view?usp=sharing
- * or
- * https://drive.google.com/open?id=1aBcDeFgHiJkLmNoPqRsTuVwXyZ
+ * Drive links look like
+ *   https://drive.google.com/file/d/<id>/view?usp=drivesdk
+ *   https://drive.google.com/open?id=<id>
+ * The Photo cell stores the link; the app parses the file ID back out of it.
  */
+const ID_PATTERN = /^[-\w]{25,}$/
+const DRIVE_HOSTS = new Set(['drive.google.com', 'docs.google.com'])
 
-const ID_REGEX = /[-\w]{25,}/
+/** File ID from a Drive link (or a bare ID). Anything that isn't recognisably Drive returns null. */
+export function getDriveFileIdFromUrl(value: string): string | null {
+  const text = value.trim()
+  if (text === '') return null
+  if (ID_PATTERN.test(text)) return text // bare ID
 
-export function getDriveFileIdFromUrl(url: string): string | null {
-  if (!url) return null
-  
+  let url: URL
   try {
-    const parsed = new URL(url)
-    
-    // Handle drive.google.com/open?id=XXXX
-    const idParam = parsed.searchParams.get('id')
-    if (idParam && ID_REGEX.test(idParam)) {
-      return idParam
-    }
-
-    // Handle drive.google.com/file/d/XXXX/view
-    const match = parsed.pathname.match(/\/d\/([-\w]{25,})/)
-    if (match && match[1]) {
-      return match[1]
-    }
-
-    // Fallback: just try to find a valid ID string anywhere in the URL
-    const fallbackMatch = url.match(ID_REGEX)
-    if (fallbackMatch && fallbackMatch[0]) {
-      return fallbackMatch[0]
-    }
+    url = new URL(text)
   } catch {
-    // If it's not a valid URL, it might just be a raw ID
-    if (ID_REGEX.test(url)) {
-      const match = url.match(ID_REGEX)
-      return match ? match[0] : null
-    }
+    return null
   }
+  if (url.protocol !== 'https:' || !DRIVE_HOSTS.has(url.hostname)) return null
 
-  return null
+  const fromQuery = url.searchParams.get('id')
+  if (fromQuery && ID_PATTERN.test(fromQuery)) return fromQuery
+  const fromPath = /\/d\/([-\w]{25,})(?:\/|$)/.exec(url.pathname)
+  return fromPath ? fromPath[1] : null
 }
 
 export function createDriveFileUrl(fileId: string): string {
-  if (!fileId || !ID_REGEX.test(fileId)) {
-    throw new Error('Invalid file ID provided')
-  }
+  if (!ID_PATTERN.test(fileId)) throw new Error('Invalid file ID provided')
   return `https://drive.google.com/file/d/${fileId}/view?usp=drivesdk`
 }

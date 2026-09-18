@@ -1,45 +1,81 @@
-import type { DriveClient } from './client'
+import { readStored, removeStored, writeStored } from '@/lib/storage'
+import type { DriveClient } from '@/services/drive/client'
+import { DriveError } from '@/services/drive/errors'
 
-const FOLDER_CACHE_KEY = 'drive_book_covers_folder_id'
 const FOLDER_NAME = 'Book Covers'
+const FOLDER_MIME = 'application/vnd.google-apps.folder'
+
+export interface FolderResolver {
+  /** ID of the `Book Covers` folder; finds or creates it, and caches the ID per Google account. */
+  getFolderId(): Promise<string>
+  /** Drop the cached ID (e.g. after an upload reports the parent folder is gone), then resolve again. */
+  forget(): void
+}
 
 /**
- * Finds or creates the "Book Covers" folder.
- * Caches the folder ID in localStorage.
+ * Create one resolver per signed-in session.
+ *
+ * `drive.file` only lets the app see files it created, so it must create the folder itself.
+ * The ID is cached in localStorage keyed by account (an ID is not a secret), and checked once
+ * per session so a folder that was deleted, trashed, or belongs to another account/client
+ * is replaced instead of failing every upload.
  */
-export async function getOrCreateFolderId(client: DriveClient): Promise<string> {
-  // 1. Check local cache
-  const cachedId = localStorage.getItem(FOLDER_CACHE_KEY)
-  if (cachedId) {
-    // Optionally verify it still exists? Not strictly required by spec, we assume it does.
-    // If a request fails later with 404, we could clear the cache and retry, but 
-    // files.list and files.create are safer for now.
-    return cachedId
+export function createFolderResolver(client: DriveClient, accountKey: string): FolderResolver {
+  const cacheKey = `bm.coverFolderId:${accountKey}`
+  let verified = false
+  let inFlight: Promise<string> | null = null
+
+  async function stillUsable(id: string): Promise<boolean> {
+    try {
+      const folder = await client.request<{ id: string; trashed?: boolean }>(
+        `/files/${encodeURIComponent(id)}?fields=id,trashed`,
+      )
+      return folder.trashed !== true
+    } catch (error) {
+      if (error instanceof DriveError && error.status === 404) return false
+      throw error // expired token, network, permission: not a reason to forget the folder
+    }
   }
 
-  // 2. Search for the folder by name
-  // Note: drive.file scope only sees files created by the app itself.
-  const query = `name = '${FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
-  const searchResult = await client.request<{ files?: { id: string }[] }>(
-    `/files?q=${encodeURIComponent(query)}&spaces=drive`
-  )
+  async function resolve(): Promise<string> {
+    const cached = readStored(cacheKey)
+    if (cached) {
+      if (verified || (await stillUsable(cached))) {
+        verified = true
+        return cached
+      }
+      removeStored(cacheKey)
+    }
 
-  if (searchResult.files && searchResult.files.length > 0 && searchResult.files[0].id) {
-    const id = searchResult.files[0].id
-    localStorage.setItem(FOLDER_CACHE_KEY, id)
+    // Oldest match first, so duplicates (e.g. from two devices) always resolve to the same folder.
+    const query = `name = '${FOLDER_NAME}' and mimeType = '${FOLDER_MIME}' and trashed = false`
+    const found = await client.request<{ files?: { id: string }[] }>(
+      `/files?q=${encodeURIComponent(query)}&spaces=drive&orderBy=createdTime&fields=files(id)`,
+    )
+    let id = found.files?.[0]?.id
+    if (!id) {
+      const created = await client.request<{ id: string }>('/files?fields=id', {
+        method: 'POST',
+        body: JSON.stringify({ name: FOLDER_NAME, mimeType: FOLDER_MIME }),
+      })
+      id = created.id
+    }
+    writeStored(cacheKey, id)
+    verified = true
     return id
   }
 
-  // 3. Create the folder if it doesn't exist
-  const createResult = await client.request<{ id: string }>('/files', {
-    method: 'POST',
-    body: JSON.stringify({
-      name: FOLDER_NAME,
-      mimeType: 'application/vnd.google-apps.folder',
-    }),
-  })
-
-  const newId = createResult.id
-  localStorage.setItem(FOLDER_CACHE_KEY, newId)
-  return newId
+  return {
+    getFolderId() {
+      // Concurrent callers share one lookup, so two uploads can't create two folders.
+      inFlight ??= resolve().finally(() => {
+        inFlight = null
+      })
+      return inFlight
+    },
+    forget() {
+      removeStored(cacheKey)
+      verified = false
+    },
+  }
 }
