@@ -19,6 +19,20 @@ export class SheetsPermissionError extends SheetsError {
   }
 }
 
+/**
+ * The spreadsheet has no tab with the name a range asked for. Google answers this with a 400 "Unable to parse range: <tab>",
+ * which says nothing about what to do; this does. It is a setup problem, so it is never retried or queued.
+ */
+export class SheetTabMissingError extends Error {
+  constructor(tab: string) {
+    super(
+      `The Sheet has no tab named "${tab}". The app needs two tabs named exactly "Books" and "Borrowers" ` +
+        '(capital first letter, no extra spaces). Rename or add them, then press Sync. See README > Sheet setup.',
+    )
+    this.name = 'SheetTabMissingError'
+  }
+}
+
 /** A tab is missing columns the app needs. */
 export class SheetSchemaError extends Error {
   constructor(tab: string, missing: string[]) {

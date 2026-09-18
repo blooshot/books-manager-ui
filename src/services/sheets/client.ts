@@ -1,4 +1,4 @@
-import { SessionExpiredError, SheetsError, SheetsPermissionError } from '@/services/sheets/errors'
+import { SessionExpiredError, SheetsError, SheetsPermissionError, SheetTabMissingError } from '@/services/sheets/errors'
 import type { Cell } from '@/services/sheets/mapping'
 
 /**
@@ -24,7 +24,7 @@ export interface SheetsClientOptions {
 
 const BASE = 'https://sheets.googleapis.com/v4/spreadsheets'
 
-async function toError(response: Response): Promise<SheetsError> {
+async function toError(response: Response): Promise<Error> {
   if (response.status === 401) return new SessionExpiredError()
   if (response.status === 403) return new SheetsPermissionError()
   let detail = ''
@@ -36,6 +36,18 @@ async function toError(response: Response): Promise<SheetsError> {
   }
   if (response.status === 404) {
     return new SheetsError('Spreadsheet not found. Check VITE_SHEET_ID.', 404)
+  }
+  if (response.status === 400) {
+    // Google's answer for a range that names a tab the spreadsheet doesn't have, e.g. "Unable to parse range: Books"
+    const missingTab = /Unable to parse range:\s*['"]?([^'"!]+)/i.exec(detail)
+    if (missingTab) return new SheetTabMissingError(missingTab[1].trim())
+    // The Sheets API cannot work with an uploaded Excel file, even though it opens in Google Sheets
+    if (/not supported for this document/i.test(detail)) {
+      return new SheetsError(
+        'This file is not a Google Sheet (it looks like an uploaded Excel file). In Google Sheets choose File > Save as Google Sheets, then put the new file’s ID in VITE_SHEET_ID.',
+        400,
+      )
+    }
   }
   return new SheetsError(detail || `Google Sheets request failed (${response.status}).`, response.status)
 }

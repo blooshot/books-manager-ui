@@ -203,6 +203,17 @@ describe('saving problems', () => {
     expect(writes(sheets)).toHaveLength(0)
   })
 
+  it('says which tab is missing when the Sheet is not set up, and keeps what was typed', async () => {
+    const sheets = new FakeSheets()
+    const { user } = renderApp({ route: '/books/new', sheets, drive })
+    await fillAdd(user)
+    delete sheets.tabs.Books // the tab is renamed or removed while the form is open
+    await user.click(screen.getByRole('button', { name: 'Save book' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('no tab named "Books"')
+    expect(field(/^Title/)).toHaveValue('Dune')
+    expect(location()).toBe('/books/new')
+  })
+
   it('shows "Saving…" and locks the form while the request is in flight', async () => {
     const sheets = new FakeSheets()
     let release: () => void = () => undefined

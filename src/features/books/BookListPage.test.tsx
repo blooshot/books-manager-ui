@@ -141,6 +141,24 @@ describe('loading, empty and error states', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
+  it('tells the user which tab is missing when the Sheet is not set up (e.g. the first tab is still "Sheet1")', async () => {
+    const sheets = new FakeSheets()
+    delete sheets.tabs.Books
+    delete sheets.tabs.Borrowers
+    renderApp({ sheets })
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('The Sheet has no tab named "Books"')
+    expect(alert).toHaveTextContent('README > Sheet setup')
+    expect(screen.queryByText(/Unable to parse range/)).not.toBeInTheDocument()
+  })
+
+  it('explains an uploaded Excel file instead of showing Google’s bare 400', async () => {
+    const sheets = new FakeSheets()
+    sheets.notNativeSheet = true
+    renderApp({ sheets })
+    expect(await screen.findByRole('alert')).toHaveTextContent('Save as Google Sheets')
+  })
+
   it('tells the user when the signed-in account cannot open the Sheet', async () => {
     const sheets = new FakeSheets()
     sheets.failNext = 403

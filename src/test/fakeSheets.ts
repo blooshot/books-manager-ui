@@ -41,6 +41,8 @@ export class FakeSheets {
   token = 'test-token'
   /** Set to make the next request fail with this status. */
   failNext?: number
+  /** Simulates an uploaded Excel file opened in Sheets: the API refuses it (Google: "This operation is not supported for this document"). */
+  notNativeSheet = false
   /** Set to make the next request with this HTTP method fail (e.g. only the append/upload/rename). */
   failNextMethod?: { method: string; status: number }
 
@@ -72,17 +74,24 @@ export class FakeSheets {
       return json({ error: { message: 'unauthenticated' } }, 401)
     }
 
+    if (this.notNativeSheet) {
+      return json({ error: { code: 400, status: 'FAILED_PRECONDITION', message: 'This operation is not supported for this document.' } }, 400)
+    }
+
     const parsed = new URL(url)
     const path = decodeURIComponent(parsed.pathname)
 
     if (path.endsWith('/values:batchGet') && method === 'GET') {
       const ranges = parsed.searchParams.getAll('ranges')
+      const unknown = ranges.find((r) => !(r in this.tabs))
+      if (unknown !== undefined) return unknownRange(unknown)
       return json({ valueRanges: ranges.map((r) => ({ range: r, values: this.read(r) })) })
     }
 
     const append = /\/values\/([^/:]+):append$/.exec(path)
     if (append && method === 'POST') {
       const tab = append[1]
+      if (!(tab in this.tabs)) return unknownRange(tab)
       const rows = this.tabs[tab]
       const row = (body.values[0] as (string | number)[]).map((v) => this.store(v))
       rows.push(row)
@@ -95,6 +104,7 @@ export class FakeSheets {
         const match = /^([^!]+)!([A-Z]+)(\d+)$/.exec(range)
         if (!match) return json({ error: { message: 'bad range' } }, 400)
         const [, tab, letters, rowNo] = match
+        if (!(tab in this.tabs)) return unknownRange(tab)
         const col = [...letters].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0) - 1
         const rows = this.tabs[tab]
         const row = rows[Number(rowNo) - 1]
@@ -130,6 +140,11 @@ export class FakeSheets {
     if (iso) return `${Number(iso[2])}/${Number(iso[3])}/${iso[1]} ${Number(iso[4])}:${iso[5]}:${iso[6]}`
     return s
   }
+}
+
+/** What the API answers when a range names a tab the spreadsheet doesn't have: 400, not 404. */
+function unknownRange(range: string): Response {
+  return json({ error: { code: 400, status: 'INVALID_ARGUMENT', message: `Unable to parse range: ${range}` } }, 400)
 }
 
 function json(body: unknown, status = 200): Response {

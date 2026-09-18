@@ -8,6 +8,7 @@ import {
   SheetsPermissionError,
   ValidationError,
 } from '@/services/sheets/errors'
+import { isRetryableFailure } from '@/services/google/errors'
 import { appendBook, appendLoan, readAll, returnLoan, updateBook } from '@/services/sheets/api'
 import { createSheetsClient } from '@/services/sheets/client'
 import { BOOK_HEADER, FakeSheets } from '@/test/fakeSheets'
@@ -206,6 +207,55 @@ describe('appendLoan / returnLoan', () => {
   it('rejects returning a book that is not borrowed', async () => {
     await expect(returnLoan(client(), { bookId: 'B-0001' })).rejects.toBeInstanceOf(NotBorrowedError)
     expect(writes()).toHaveLength(0)
+  })
+})
+
+describe('a Sheet that is not set up as expected', () => {
+  it('names the missing tab when there is no "Books" tab (e.g. the first tab is still called Sheet1)', async () => {
+    delete sheets.tabs.Books
+    const error = await readAll(client()).catch((e: unknown) => e)
+    expect(error).toMatchObject({ name: 'SheetTabMissingError' })
+    expect((error as Error).message).toContain('"Books"')
+    expect((error as Error).message).toMatch(/Borrowers/)
+  })
+
+  it('names the missing tab when only "Borrowers" is missing', async () => {
+    delete sheets.tabs.Borrowers
+    const error = await readAll(client()).catch((e: unknown) => e)
+    expect(error).toMatchObject({ name: 'SheetTabMissingError' })
+    expect((error as Error).message).toContain('"Borrowers"')
+  })
+
+  it.each([
+    ['adding a book', () => appendBook(client(), { title: 'Dune', author: 'Herbert' })],
+    ['editing a book', () => updateBook(client(), 'B-0001', { title: 'x' })],
+    ['borrowing', () => appendLoan(client(), { bookId: 'B-0001', borrowerName: 'Ravi', place: '' })],
+    ['returning', () => returnLoan(client(), { bookId: 'B-0001' })],
+  ])('reports the missing tab when %s', async (_label, action) => {
+    delete sheets.tabs.Books
+    delete sheets.tabs.Borrowers
+    await expect(action()).rejects.toMatchObject({ name: 'SheetTabMissingError' })
+  })
+
+  it('is not retried or queued: a missing tab is a setup problem, not a network problem', async () => {
+    delete sheets.tabs.Books
+    const error = await readAll(client()).catch((e: unknown) => e)
+    expect(isRetryableFailure(error)).toBe(false)
+  })
+
+  it('explains an uploaded Excel file (Google refuses the API for it)', async () => {
+    sheets.notNativeSheet = true
+    const error = await readAll(client()).catch((e: unknown) => e)
+    expect((error as Error).message).toMatch(/not a Google Sheet|Excel/i)
+    expect((error as Error).message).toMatch(/Save as Google Sheets/)
+    expect(isRetryableFailure(error)).toBe(false)
+  })
+
+  it('still passes an unrecognised 400 through with Google’s own words', async () => {
+    sheets.failNext = 400
+    const error = await readAll(client()).catch((e: unknown) => e)
+    expect(error).toMatchObject({ name: 'SheetsError', code: '400' })
+    expect((error as Error).message).toContain('fake failure 400')
   })
 })
 

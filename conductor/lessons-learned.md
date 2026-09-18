@@ -56,3 +56,9 @@ Add a row whenever a review finds something the process should have caught. Keep
 |---|---|
 | Steps 6a-7 had 470 green tests and the app had never been opened in a browser. The first real look showed there was no redirect after login (no login route), that a deliberate sign-out returned you to the old page, that sign-out could hang offline, and that Google's script loaded only after the click | For UI work, walk the flow in a real browser (stub Google at the network layer if needed) before calling it done, and say what that did not cover (workflow.md Definition of Done 3) |
 
+## First real Sheet (Claude Code), for the record
+
+| What went wrong | Rule now |
+|---|---|
+| The first real request returned a 400 (`Unable to parse range: Books`, the Sheet's first tab was still "Sheet1"). Our client passed Google's raw text through, and the fake Sheet *crashed* on an unknown tab instead of answering 400, so no test had ever covered it | Map known Google errors to what the user should do; a fake must answer like the service for bad input too (unknown tab -> 400), never throw (testing.md rule 3); document the setup the app needs (README > Sheet setup) |
+
