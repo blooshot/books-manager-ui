@@ -23,4 +23,4 @@
 - [x] Task: Implement IndexedDB cache (`src/services/drive/coverCache.ts`) [5feed1d]
   - [x] Write tests for storing/retrieving full image and thumbnail Blobs by file ID
   - [x] Implement IndexedDB storage logic
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 5feed1d]
