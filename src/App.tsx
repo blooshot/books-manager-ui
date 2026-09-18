@@ -1,5 +1,6 @@
 import { Link, Route, Routes } from 'react-router'
-import { SignInGate } from '@/features/auth/SignInGate'
+import { LoginRoute } from '@/features/auth/LoginRoute'
+import { RequireSession } from '@/features/auth/RequireSession'
 import { useTokenExpiry } from '@/features/auth/useTokenExpiry'
 import { BookDetailPage } from '@/features/books/BookDetailPage'
 import { AddBookPage, EditBookPage } from '@/features/books/BookFormPage'
@@ -8,7 +9,6 @@ import { CoverProvider } from '@/features/covers/CoverProvider'
 import { AppLayout } from '@/features/layout/AppLayout'
 import { LentOutPage } from '@/features/loans/LentOutPage'
 import { PendingChangesPage } from '@/features/sync/PendingChangesPage'
-import { useAppSelector } from '@/store/hooks'
 
 function NotFoundPage() {
   return (
@@ -19,18 +19,24 @@ function NotFoundPage() {
   )
 }
 
-/** Routes only; the router itself (hash routing) is provided by main.tsx so tests can use a memory router. */
+/**
+ * Routes only; the router itself (hash routing) is provided by main.tsx so tests can use a memory router.
+ * `/login` is the only public route; everything else needs a session (see RequireSession).
+ */
 export function AppRoutes() {
   return (
     <Routes>
-      <Route element={<AppLayout />}>
-        <Route index element={<BookListPage />} />
-        <Route path="books/new" element={<AddBookPage />} />
-        <Route path="books/:id" element={<BookDetailPage />} />
-        <Route path="books/:id/edit" element={<EditBookPage />} />
-        <Route path="lent-out" element={<LentOutPage />} />
-        <Route path="pending" element={<PendingChangesPage />} />
-        <Route path="*" element={<NotFoundPage />} />
+      <Route path="login" element={<LoginRoute />} />
+      <Route element={<RequireSession />}>
+        <Route element={<AppLayout />}>
+          <Route index element={<BookListPage />} />
+          <Route path="books/new" element={<AddBookPage />} />
+          <Route path="books/:id" element={<BookDetailPage />} />
+          <Route path="books/:id/edit" element={<EditBookPage />} />
+          <Route path="lent-out" element={<LentOutPage />} />
+          <Route path="pending" element={<PendingChangesPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
       </Route>
     </Routes>
   )
@@ -38,9 +44,6 @@ export function AppRoutes() {
 
 export default function App() {
   useTokenExpiry()
-  const status = useAppSelector((s) => s.session.status)
-  // 'expired' keeps the app on screen (with the reconnect banner) so nothing in progress is lost.
-  if (status !== 'signedIn' && status !== 'expired') return <SignInGate />
   return (
     <CoverProvider>
       <AppRoutes />

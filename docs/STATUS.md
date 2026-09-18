@@ -4,7 +4,7 @@ Read this after `AGENTS.md` at the start of every session; update it at the end
 of every session or milestone (protocol in `AGENTS.md`; how to keep it consistent: `conductor/workflow.md`).
 Newest entries at the top of "Log". Keep it short and factual.
 
-**Last updated:** 2026-09-19 · **By:** Claude Code (step 7)
+**Last updated:** 2026-09-19 · **By:** Claude Code (login flow, after step 7)
 
 ## Where we are
 
@@ -21,11 +21,11 @@ Build order (from `AGENTS.md`):
 | 6a | Screens: shell + routing, book list (search/filter), book detail + borrow history, covers, notices | **Done** (Claude, committed `1c54d18`) — fake Sheets/Drive, jsdom only |
 | 6b | Screens: add/edit book form with photo capture, form drafts | **Done** (Claude, committed `c7510da`) — fake Sheets/Drive, jsdom only |
 | 6c | Screens: borrow / return, Lent out | **Done** (Claude, committed `1ff697f`) — fake Sheets/Drive, jsdom only |
-| 7 | Outbox + Sync button | **Done** (Claude) — fakes only; awaiting review |
+| 7 | Outbox + Sync button | **Done** (Claude, committed `7e48b8a`) — fakes only |
 | 8 | Protected range on `Books` (verify owner behaviour, ADR-0004) | **Next**, owner-driven (brief below) — needs the real Sheet |
 | 9 | Deploy + CI/CD | Not started (brief below) |
 
-`npm run verify` passes: **451 tests in 33 files**, build OK, 1 known lint warning (generated `button.tsx`).
+`npm run verify` passes: **470 tests in 34 files**, build OK, 1 known lint warning (generated `button.tsx`).
 
 ## What exists
 
@@ -124,6 +124,13 @@ selectors (`selectOpenLoanByBookId`, `selectLentOutByBorrower`). Fusion tokens i
 - Tests: `store/outbox.test.ts` (34: queueing, ordering, partial failure, conflicts, expired token, concurrent flush, **lost-response retries for add/borrow/return/photo**, startup from a stored queue, overlay, discard/retry), `services/outbox/*.test.ts` (IndexedDB, overlay, retryable classification),
   `features/sync/Sync.test.tsx` (18: offline borrow/return/add/edit journeys, reload while offline and online, reconnect, conflict, pending page). Control checks: 8 on the outbox logic, 6 on the UI, plus the `Added at` fix, all red -> green.
 
+**Login flow** (after step 7; looked at in real Chrome, see Not verified):
+- `/login` (`LoginRoute`) is the only public route; `RequireSession` sends every other route there when signed out, keeping the requested location in router state so a successful sign-in returns to it (a deep link survives). After a deliberate sign-out
+  (`session.signedOutByUser`) the location is not kept, so the next sign-in starts at `/`. A signed-in user visiting `/login` goes home. An expired session stays put (banner). `App` is now just `CoverProvider` + `AppRoutes`.
+- `SignOutControl` (header, every screen): instant; if any outbox entries exist it asks "Sign out with unsent changes?" (Stay signed in / Sign out anyway). `signOut` does not await Google's token revoke; books, loans, library status, notices and the outbox *view* are cleared
+  on `signOut.fulfilled`; unsent changes stay in IndexedDB and are sent automatically at the next sign-in (`startSync`).
+- `SignInGate` preloads Google's script on mount so the sign-in click can open the popup at once. Tests: `features/auth/AuthFlow.test.tsx` (19; 7 control checks red -> green), including a journey: save a change offline -> sign out anyway -> back online -> sign in -> it is sent automatically.
+
 **Guards/conventions** — `src/test/no-delete.test.ts`: no delete/clear/`trashed:true`/trash/`FormData` upload; Sheets endpoint
 allow-list; Drive method allow-list and PATCH-only-rename. `src/test/conventions.test.ts`: no raw storage outside `lib/storage.ts`,
 no `any`, default exports only for App/main/slices.
@@ -142,6 +149,9 @@ no `any`, default exports only for App/main/slices.
 - **The UI has never been seen in a browser:** layout at phone/desktop widths, dark mode, the Fusion look, focus rings, hover lift, `prefers-reduced-motion`, keyboard use,
   and the sidebar/bottom-nav switch at the 768px breakpoint. jsdom has no CSS or layout, so tests cover behaviour and accessibility roles only; `useMediaQuery` is driven by a stand-in.
 - **Covers on screen:** the list/detail *display* covers through a stub loader in tests. `createBrowserCoverLoader` (real object URLs, real IndexedDB, canvas thumbnails) has never run in a browser.
+- **Verified in real Chrome (headless, v153) with Google stubbed:** using a scratch harness (puppeteer-core + the system Chrome, not in the repo) that stubs Google's sign-in script and the Sheets/Drive responses at the network layer, I walked: signed-out deep link -> `#/login` -> sign in -> back to the
+  deep link; sign out -> `#/login` -> sign in -> `#/`; an unreachable Sheet -> "1 pending" and the unsent-changes warning; and looked at screenshots at 390px and 1280px (layout, Fusion styling, sidebar vs bottom nav, dialog as bottom sheet). **This is not real Google**: real sign-in,
+  scopes, consent, real Sheets/Drive, and dark mode were not exercised, and the stub does not implement Sheets *writes* (so a retried write there ended as a 404 "failed" entry, which is a harness limit).
 - **The outbox has only run against `MemoryOutbox` and `fake-indexeddb`**, never real IndexedDB in Safari/Chrome/Firefox (quota, private windows, the connection closing between calls, storage eviction), and never against real network loss or a real 401. The "lost response"
   retries are simulated by a fake that applies a write and then throws.
 - **Idempotency depends on how the Sheet formats things.** `Added at` is forced text so an add retry always matches. Borrow and return retries match on the date and time as *displayed*, so the `Borrowed date` / `Returned date` columns must be formatted `yyyy-mm-dd` and the time
@@ -214,6 +224,10 @@ Decisions needed first: static host (Cloudflare Pages / Netlify / GitHub Pages) 
 
 ## Log
 
+- 2026-09-19 — Claude Code: **login flow fixed after looking at the running UI.** Opening the app in real Chrome (Google stubbed) showed: no redirect after login (no login route), a deliberate sign-out returned you to the old page on the next sign-in, sign-out could hang while offline (it awaited the token revoke),
+  the previous library stayed in memory after sign-out, and Google's script was only loaded after the click (popup-blocking risk). Added `/login` + `RequireSession`, instant sign-out that clears in-memory data, a confirm when changes are unsent, and script preloading. **Verified:** `npm run verify` on the final code:
+  470 tests / 34 files, build OK, 1 known lint warning; 7 control checks red -> green; the flow re-walked in real Chrome. **Not verified:** real Google sign-in; dark mode; anything on a real phone. **Observations, not fixed:** the header **Sync** icon and the list page **Refresh** button look like the same control
+  (two circular arrows); the detail page shows `Added` as a raw ISO timestamp. **Follow-ups:** a committed browser check script if wanted; step 8 (owner); step 9.
 - 2026-09-19 — Claude Code: **step 7 done (awaiting owner review).** Outbox in IndexedDB; retryable failures (expired token, no network) keep the optimistic change and queue it; ordered, idempotent flush on sign-in, reconnect, and Sync; Pending changes page; header pending/failed indicator.
   **Verified:** `npm run verify` on the final code: 451 tests / 33 files, build OK, 1 known lint warning; 14 control checks red -> green (8 outbox logic, 6 UI) plus the `Added at` regression. **Found and fixed:** `Added at` (the add-retry key) would not have round-tripped through real Sheets (ISO datetimes are parsed), which would have
   made a retried add append a duplicate; the fake now models that and the value is forced text. Also: rewrote a vacuous "Syncing…" test and fixed a request-count assertion. **Not verified:** real IndexedDB in browsers, real network/401, real Sheet date/time formatting (see Not verified). **Deviations:** none from the brief; an offline-added book

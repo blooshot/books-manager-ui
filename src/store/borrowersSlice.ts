@@ -1,4 +1,5 @@
 import { createEntityAdapter, createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { signOut } from '@/store/sessionSlice'
 import type { Loan } from '@/types/library'
 
 export const loansAdapter = createEntityAdapter<Loan, string>({
@@ -18,6 +19,10 @@ const borrowersSlice = createSlice({
     loanSet: loansAdapter.setOne,
     /** Drops a local, not-yet-confirmed loan row from the store. Never touches the Sheet. */
     loanDiscarded: loansAdapter.removeOne,
+  },
+  // Signing out leaves nothing of the library in memory
+  extraReducers: (builder) => {
+    builder.addCase(signOut.fulfilled, () => loansAdapter.getInitialState())
   },
 })
 

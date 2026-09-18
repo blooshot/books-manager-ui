@@ -51,3 +51,11 @@ Session handling:
 - If the project ever needs offline support, push notifications, or
   multi-user auth, Firebase (or an equivalent) should be reconsidered —
   it was rejected for the current single-user scope only.
+
+## Clarifications (from building and looking at the sign-in flow)
+- **Routes:** `/login` is the only public route. A `RequireSession` guard sends everyone else to `/login`, remembering the requested location so a successful sign-in returns there. After a deliberate sign-out the location is *not* remembered
+  (the next sign-in starts at home). An *expired* session is not signed out: the app stays on screen with the reconnect banner (nothing in progress is lost).
+- **Sign-out is instant.** The token is revoked at Google in the background and never awaited: Google's revoke only returns when the network does, and an early sign-out (or one while offline) must not hang. All in-memory library data (books, loans, notices,
+  the outbox view) is cleared on sign-out. Unsent changes stay in IndexedDB and are sent the next time you sign in; because of that, Sign out asks for confirmation when any exist. The email hint, the theme, and the cover cache stay on the device.
+- **Google's script is preloaded** when the login screen appears, so the click that starts sign-in can open the popup immediately. Loading it only after the click risks the browser treating the popup as not user-initiated (Safari especially) and blocking it.
+

@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { OutboxEntry } from '@/services/outbox/types'
+import { signOut } from '@/store/sessionSlice'
 
 export interface OutboxState {
   /** The stored queue has been read (once, at startup). */
@@ -42,6 +43,10 @@ const outboxSlice = createSlice({
     syncFinished(state) {
       state.syncing = false
     },
+  },
+  // Only the in-memory view is cleared. Unsent changes stay in IndexedDB and are sent the next time you sign in.
+  extraReducers: (builder) => {
+    builder.addCase(signOut.fulfilled, () => initialState)
   },
 })
 

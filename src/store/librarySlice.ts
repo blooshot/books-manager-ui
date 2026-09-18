@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit'
 import { loadAll } from '@/store/libraryThunks'
+import { signOut } from '@/store/sessionSlice'
 
 export interface LibraryState {
   status: 'idle' | 'loading' | 'ready' | 'error'
@@ -17,6 +18,7 @@ const librarySlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
+      .addCase(signOut.fulfilled, () => initialState)
       .addCase(loadAll.pending, (state) => {
         state.status = 'loading'
         state.error = null

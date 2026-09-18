@@ -1,4 +1,5 @@
 import { createEntityAdapter, createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { signOut } from '@/store/sessionSlice'
 import type { Book } from '@/types/library'
 
 /** Books are append-only (ADR-0004): there is deliberately no remove action here. */
@@ -17,6 +18,10 @@ const booksSlice = createSlice({
     bookUpdated: booksAdapter.updateOne,
     /** Insert or replace a whole book (used to reconcile optimistic updates and roll them back). */
     bookSet: booksAdapter.setOne,
+  },
+  // Signing out leaves nothing of the library in memory
+  extraReducers: (builder) => {
+    builder.addCase(signOut.fulfilled, () => booksAdapter.getInitialState())
   },
 })
 

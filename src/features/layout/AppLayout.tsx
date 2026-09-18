@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet } from 'react-router'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { ReconnectBanner } from '@/features/auth/ReconnectBanner'
+import { SignOutControl } from '@/features/auth/SignOutControl'
 import { NoticesHost } from '@/features/layout/NoticesHost'
 import { readStored, writeStored } from '@/lib/storage'
 import { useIsDesktop } from '@/lib/useMediaQuery'
@@ -11,7 +12,6 @@ import { cn } from '@/lib/utils'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { SyncControl } from '@/features/sync/SyncControl'
 import { startSync } from '@/store/outboxThunks'
-import { signOut } from '@/store/sessionSlice'
 
 interface NavItem {
   to: string
@@ -100,7 +100,7 @@ export function AppLayout() {
               {email && <span className="hidden font-mono text-xs text-muted-foreground sm:inline">{email}</span>}
               <SyncControl />
               <ThemeToggle />
-              <Button variant="outline" size="sm" onClick={() => void dispatch(signOut())}>Sign out</Button>
+              <SignOutControl />
             </div>
           </header>
           <main className={cn('mx-auto w-full max-w-5xl flex-1 p-4', !isDesktop && 'pb-24')}>

@@ -141,8 +141,11 @@ A book that is already out cannot be borrowed again.
 
 ## Screens
 
-1. Sign-in gate — "Continue as <email>" when a hint exists; "wrong account"
-   message on a 403 from the Sheet
+1. Sign-in at `/login` — "Continue as <email>" when a hint exists. Every other
+   route needs a session: signed out, you go to `/login` and, after signing in,
+   return to where you were heading (home after a deliberate sign-out). **Sign
+   out** is in the header on every screen, instant, and asks first if changes
+   have not reached the Sheet; "wrong account" message on a 403 from the Sheet
 2. Book list — cover thumbnail, title, author, available/borrowed badge.
    Table on desktop, cards on phone
 3. Book detail — full metadata + that book's borrow history (activity feed)

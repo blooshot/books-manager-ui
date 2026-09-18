@@ -50,3 +50,9 @@ Add a row whenever a review finds something the process should have caught. Keep
 | A test ("Syncing…") passed while asserting almost nothing (it swallowed a failure and checked nothing about the in-flight state) | After writing tests, re-read each for what it can fail on; hold the operation in flight and assert on it (testing.md rule 1) |
 | Counting `batchGet` requests could not tell a reload from the flush's own read | Assert on the observable state (library status) rather than on request counts when several code paths make the same request |
 
+## Login flow (Claude Code), for the record
+
+| What went wrong | Rule now |
+|---|---|
+| Steps 6a-7 had 470 green tests and the app had never been opened in a browser. The first real look showed there was no redirect after login (no login route), that a deliberate sign-out returned you to the old page, that sign-out could hang offline, and that Google's script loaded only after the click | For UI work, walk the flow in a real browser (stub Google at the network layer if needed) before calling it done, and say what that did not cover (workflow.md Definition of Done 3) |
+

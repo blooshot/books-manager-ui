@@ -3,7 +3,7 @@ import { CoverLoaderContext } from '@/features/covers/coverContext'
 import { createDriveClient } from '@/services/drive/client'
 import { createBrowserCoverLoader, type CoverLoader } from '@/services/drive/covers'
 import { accessTokenGetter } from '@/store/accessToken'
-import { useAppStore } from '@/store/hooks'
+import { useAppSelector, useAppStore } from '@/store/hooks'
 
 /**
  * One cover loader for the signed-in session: object URLs are shared across screens and revoked
@@ -16,5 +16,10 @@ export function CoverProvider({ children, loader }: { children: ReactNode; loade
     [loader, store],
   )
   useEffect(() => () => active.releaseAll(), [active])
+  // Signing out frees every cover this session was showing
+  const signedOut = useAppSelector((s) => s.session.status === 'signedOut')
+  useEffect(() => {
+    if (signedOut) active.releaseAll()
+  }, [signedOut, active])
   return <CoverLoaderContext.Provider value={active}>{children}</CoverLoaderContext.Provider>
 }

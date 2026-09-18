@@ -16,6 +16,8 @@ export interface SessionState {
   /** Remembered email, for "Continue as ...". */
   email: string | null
   error: string | null
+  /** The user chose to sign out (as opposed to never having signed in): the next sign-in starts at the home page. */
+  signedOutByUser: boolean
 }
 
 const initialState: SessionState = {
@@ -24,6 +26,7 @@ const initialState: SessionState = {
   expiresAt: null,
   email: readStored(EMAIL_HINT_KEY),
   error: null,
+  signedOutByUser: false,
 }
 
 interface SignInResult {
@@ -46,11 +49,16 @@ export const signIn = createAsyncThunk<SignInResult, void, { state: RootState }>
   },
 )
 
+/**
+ * Signing out is instant. The token is revoked at Google in the background: the revoke call only returns when the
+ * network does, and an early sign-out (or one while offline) must never hang waiting for it.
+ * The other slices clear their data on this action, so nothing of the library stays in memory.
+ */
 export const signOut = createAsyncThunk<void, void, { state: RootState }>(
   'session/signOut',
   async (_arg, { getState }) => {
     const token = getState().session.accessToken
-    if (token) await revokeAccessToken(token)
+    if (token) void revokeAccessToken(token)
   },
 )
 
@@ -76,6 +84,7 @@ const sessionSlice = createSlice({
       .addCase(signIn.pending, (state) => {
         state.status = state.status === 'expired' ? 'expired' : 'signingIn'
         state.error = null
+        state.signedOutByUser = false
       })
       .addCase(signIn.fulfilled, (state, { payload }) => {
         state.status = 'signedIn'
@@ -95,6 +104,7 @@ const sessionSlice = createSlice({
         state.accessToken = null
         state.expiresAt = null
         state.error = null
+        state.signedOutByUser = true
       })
   },
 })

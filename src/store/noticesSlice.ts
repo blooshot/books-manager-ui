@@ -1,4 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { signOut } from '@/store/sessionSlice'
 
 /**
  * Non-fatal problems the user should know about but that did not fail the action
@@ -18,6 +19,9 @@ const noticesSlice = createSlice({
     noticeDismissed(state, action: PayloadAction<number>) {
       state.items.splice(action.payload, 1)
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(signOut.fulfilled, () => ({ items: [] }))
   },
 })
 

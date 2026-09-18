@@ -1,6 +1,8 @@
 import { BookOpen } from 'lucide-react'
+import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { missingConfig } from '@/lib/config'
+import { loadGis } from '@/services/google/gis'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { forgetEmail, signIn } from '@/store/sessionSlice'
 
@@ -9,6 +11,12 @@ export function SignInGate() {
   const { status, email, error } = useAppSelector((s) => s.session)
   const missing = missingConfig()
   const busy = status === 'signingIn'
+
+  // Load Google's sign-in script while the page is idle, so the click that starts sign-in can open the popup at once.
+  // If the script had to load *after* the click, browsers (Safari especially) may block the popup as not user-initiated.
+  useEffect(() => {
+    void loadGis().catch(() => undefined) // a failure is reported when the user actually tries to sign in
+  }, [])
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col items-center justify-center gap-6 px-4 text-center">
