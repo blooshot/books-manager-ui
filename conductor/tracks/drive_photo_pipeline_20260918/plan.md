@@ -10,10 +10,10 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 4c3d361]
 
 ## Phase 2: Folder & Photo Operations
-- [ ] Task: Implement folder management (`src/services/drive/folder.ts`)
-  - [ ] Extend `src/test/no-delete.test.ts` to block Drive delete API calls
-  - [ ] Write fake-fetch tests for find-or-create logic (missing, existing, duplicate)
-  - [ ] Implement `Book Covers` folder resolution and `localStorage` caching
+- [x] Task: Implement folder management (`src/services/drive/folder.ts`) [624a8e1]
+  - [x] Extend `src/test/no-delete.test.ts` to block Drive delete API calls
+  - [x] Write fake-fetch tests for find-or-create logic (missing, existing, duplicate)
+  - [x] Implement `Book Covers` folder resolution and `localStorage` caching
 - [ ] Task: Implement photo operations (`src/services/drive/photos.ts`)
   - [ ] Write fake-fetch tests for upload, fetchBlob, and markReplaced (rename)
   - [ ] Implement operations
