@@ -20,7 +20,7 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: b5e0e49]
 
 ## Phase 3: Cover Caching
-- [ ] Task: Implement IndexedDB cache (`src/services/drive/coverCache.ts`)
-  - [ ] Write tests for storing/retrieving full image and thumbnail Blobs by file ID
-  - [ ] Implement IndexedDB storage logic
+- [x] Task: Implement IndexedDB cache (`src/services/drive/coverCache.ts`) [5feed1d]
+  - [x] Write tests for storing/retrieving full image and thumbnail Blobs by file ID
+  - [x] Implement IndexedDB storage logic
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
