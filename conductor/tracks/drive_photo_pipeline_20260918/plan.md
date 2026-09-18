@@ -1,9 +1,9 @@
 # Implementation Plan: Drive Photo Pipeline
 
 ## Phase 1: Drive Client & Core Utilities
-- [ ] Task: Implement Drive API client wrapper (`src/services/drive/client.ts`)
-  - [ ] Write unit tests for API error mapping (401, 403, Network)
-  - [ ] Implement fetch wrapper and shared error base
+- [x] Task: Implement Drive API client wrapper (`src/services/drive/client.ts`) [8ccbffb]
+  - [x] Write unit tests for API error mapping (401, 403, Network)
+  - [x] Implement fetch wrapper and shared error base
 - [ ] Task: Implement image resizing math and link parsing (`src/lib/image.ts`, `src/services/drive/links.ts`)
   - [ ] Write unit tests for sizing math and Drive URL/ID parsing
   - [ ] Implement logic
