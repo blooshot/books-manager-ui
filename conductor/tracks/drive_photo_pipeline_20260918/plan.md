@@ -7,7 +7,7 @@
 - [x] Task: Implement image resizing math and link parsing (`src/lib/image.ts`, `src/services/drive/links.ts`) [4c3d361]
   - [x] Write unit tests for sizing math and Drive URL/ID parsing
   - [x] Implement logic
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 4c3d361]
 
 ## Phase 2: Folder & Photo Operations
 - [ ] Task: Implement folder management (`src/services/drive/folder.ts`)
