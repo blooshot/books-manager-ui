@@ -26,3 +26,12 @@ export function isValidTime(text: string): boolean {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(text)
 }
 
+/**
+ * An ISO timestamp such as `2026-01-01T12:00:00.000Z` as local `yyyy-mm-dd HH:mm`, the same style as every other
+ * date and time in the app. Anything that isn't a valid timestamp is returned unchanged rather than hidden.
+ */
+export function formatTimestamp(iso: string): string {
+  const date = new Date(iso)
+  return Number.isNaN(date.getTime()) ? iso : `${formatDate(date)} ${formatTime(date)}`
+}
+

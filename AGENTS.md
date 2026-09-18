@@ -118,8 +118,8 @@ A book that is already out cannot be borrowed again.
    optimistic change still on screen, shown as "N pending". It is sent in
    order, safely repeatable, on sign-in, after a reconnect, and by the **Sync**
    button, which then reloads from the Sheet. Details: ADR-0006.
-4. **Refresh** on startup, via a manual refresh button, and after a
-   reconnect. Not on a timer.
+4. **Refresh** on startup, via the **Sync** button (it sends anything unsent
+   and then reloads), and after a reconnect. Not on a timer.
 5. **Expiry.** Tokens last ~1 hour. On expiry (or a 401) show a
    non-blocking "Session expired — Reconnect" banner, then retry the pending
    action automatically. A 401 means the write did not happen, so retrying

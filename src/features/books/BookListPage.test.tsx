@@ -171,20 +171,27 @@ describe('loading, empty and error states', () => {
     const { user } = renderApp({ sheets })
     await screen.findByText('Dune')
     sheets.failNext = 500
-    await user.click(screen.getByRole('button', { name: 'Refresh' }))
+    await user.click(screen.getByRole('button', { name: 'Sync' }))
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     expect(screen.getByText('Dune')).toBeInTheDocument()
   })
 })
 
-describe('refresh', () => {
-  it('picks up changes made directly in the Sheet', async () => {
+describe('refreshing is done by the one Sync button', () => {
+  it('the list has no separate Refresh button (Sync sends unsent changes and reloads)', async () => {
+    renderApp({ sheets: libraryWithThreeBooks() })
+    await screen.findByText('Dune')
+    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Sync' })).toHaveLength(1)
+  })
+
+  it('Sync picks up changes made directly in the Sheet', async () => {
     const sheets = libraryWithThreeBooks()
     const { user } = renderApp({ sheets })
     await screen.findByText('Dune')
     sheets.tabs.Books.push(bookRow({ id: 'B-0004', title: 'Neuromancer', author: 'Gibson' }))
     sheets.tabs.Borrowers.push(loanRow({ bookId: 'B-0001', borrower: 'Asha' }))
-    await user.click(screen.getByRole('button', { name: 'Refresh' }))
+    await user.click(screen.getByRole('button', { name: 'Sync' }))
     expect(await screen.findByText('Neuromancer')).toBeInTheDocument()
     await waitFor(() => expect(within(screen.getByRole('list', { name: 'Books' })).getAllByText('Borrowed')).toHaveLength(2))
   })

@@ -8,15 +8,17 @@ import { syncAll } from '@/store/outboxThunks'
 import { cn } from '@/lib/utils'
 
 /**
- * "N pending" (a link to the list of what is waiting) and the Sync button: send everything queued, then reload
- * from the Sheet. Sync is off while it is running, and while the session has expired (nothing can be sent until
- * you reconnect; the banner explains).
+ * "N pending" (a link to the list of what is waiting) and the one Sync button: send everything queued, then reload
+ * from the Sheet (so it is also how you refresh). It spins while sending or loading, and is off while busy and while the
+ * session has expired (nothing can be sent until you reconnect; the banner explains).
  */
 export function SyncControl() {
   const dispatch = useAppDispatch()
   const pending = useAppSelector(selectPendingCount)
   const failed = useAppSelector(selectFailedCount)
   const syncing = useAppSelector((s) => s.outbox.syncing)
+  const loading = useAppSelector((s) => s.library.status === 'loading')
+  const busy = syncing || loading
   const signedIn = useAppSelector((s) => s.session.status === 'signedIn')
 
   return (
@@ -31,10 +33,10 @@ export function SyncControl() {
         variant="outline"
         size="sm"
         onClick={() => void dispatch(syncAll())}
-        disabled={syncing || !signedIn}
-        title={signedIn ? undefined : 'Reconnect to Google first'}
+        disabled={busy || !signedIn}
+        title={signedIn ? 'Send unsent changes to your Sheet, then reload from it' : 'Reconnect to Google first'}
       >
-        <RefreshCw className={cn(syncing && 'animate-spin motion-reduce:animate-none')} aria-hidden />
+        <RefreshCw className={cn(busy && 'animate-spin motion-reduce:animate-none')} aria-hidden />
         <span className="max-sm:sr-only">{syncing ? 'Syncing…' : 'Sync'}</span>
       </Button>
     </div>

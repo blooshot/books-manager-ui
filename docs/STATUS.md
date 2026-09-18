@@ -4,7 +4,7 @@ Read this after `AGENTS.md` at the start of every session; update it at the end
 of every session or milestone (protocol in `AGENTS.md`; how to keep it consistent: `conductor/workflow.md`).
 Newest entries at the top of "Log". Keep it short and factual.
 
-**Last updated:** 2026-09-19 · **By:** Claude Code (first real Sheet, Chrome check)
+**Last updated:** 2026-09-19 · **By:** Claude Code (polish after the owner's real-Google run)
 
 ## Where we are
 
@@ -25,7 +25,7 @@ Build order (from `AGENTS.md`):
 | 8 | Protected range on `Books` (verify owner behaviour, ADR-0004) | **Next**, owner-driven (brief below) — needs the real Sheet |
 | 9 | Deploy + CI/CD | Not started (brief below) |
 
-`npm run verify` passes: **482 tests in 34 files**; `npm run ui:check` passes **7 flows**, build OK, 1 known lint warning (generated `button.tsx`).
+`npm run verify` passes: **491 tests in 35 files**; `npm run ui:check` passes **7 flows**, build OK, 1 known lint warning (generated `button.tsx`).
 
 ## What exists
 
@@ -147,7 +147,10 @@ no `any`, default exports only for App/main/slices.
 
 ## Not verified (be honest about these)
 
-- **Nothing has run against the real Google APIs** (sign-in, Sheets, Drive). Everything is tested only against `FakeSheets` / `FakeDrive`.
+- **Verified by the owner against real Google (2026-09-19):** sign-in, loading the Sheet, adding and editing books, **photo upload and replace on real Drive**, borrow, return, and the Lent out screen all worked on the owner's real Sheet. (Reported as working; details such as
+  the exact Drive folder contents or renamed `deleted-file-*` files were not inspected by me.)
+- **Still only tested against `FakeSheets` / `FakeDrive` / stubs:** the offline queue, Sync, the sign-out warning, the reconnect-after-expiry flow, and retries after a lost response against the real APIs (owner offline-test steps were given in chat; results not yet reported). Everything else in this list is unchanged.
+- **Historic note (before the owner's run):** nothing had run against the real Google APIs.
   Those fakes encode Google's documented behaviour, but the docs, not a real run, are the source.
   Drive-specific risks to check on the first real run: multipart upload accepted; folder create/rename accepted (JSON content type);
   `drive.file` can see the folder it created on the next session; `files.get?fields=id,trashed` on the cached folder.
@@ -231,6 +234,9 @@ Decisions needed first: static host (Cloudflare Pages / Netlify / GitHub Pages) 
 
 ## Log
 
+- 2026-09-19 — Claude Code: **polish.** The header **Sync** button is now the only refresh control (it sends unsent changes, then reloads; it spins and disables while sending *or* loading, and its tooltip says what it does); the list page's look-alike **Refresh** button is gone.
+  The detail page shows `Added` as local `yyyy-mm-dd HH:mm` instead of the raw ISO timestamp (`formatTimestamp`). The owner reported real-Google runs of sign-in, Sheet load, add/edit, photos, borrow/return and Lent out all working. **Verified:** `npm run verify` on the final code: 491 tests / 35 files, build OK, 1 known lint warning;
+  `npm run ui:check` 7/7 (the layout and add-book flows now assert the single Sync control and the readable Added time); 3 control checks red -> green in both layers; screenshots looked at. **Not verified:** dark mode; a real phone; the real offline/sync/expiry flows (owner steps given). **Follow-ups:** step 8 (owner), step 9.
 - 2026-09-19 — Claude Code: **first real Sheet: 400 explained; Chrome check committed.** A `batchGet?ranges=Books` returned 400 from the owner's Sheet: Google answers `Unable to parse range: Books` when the spreadsheet has no tab of that name (a new Sheet's first tab is `Sheet1`). The client now says what to do, the fake
   answers like Google for unknown tabs, and README has the exact setup. Added `npm run ui:check` (7 flows). **Verified:** `npm run verify` on the final code: 482 tests / 34 files, build OK, 1 known lint warning; `npm run ui:check`: 7/7; 4 control checks on the script red -> green; the new tests were written red first.
   **Not verified:** the owner's real Sheet (the response body was not seen; the diagnosis is the standard cause and the friendly message will confirm it on the next run), real Google sign-in. **Follow-ups:** owner fixes the Sheet per README; step 8; step 9.

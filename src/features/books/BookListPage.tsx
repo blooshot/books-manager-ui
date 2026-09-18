@@ -1,4 +1,4 @@
-import { Plus, RefreshCw, Search } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import { useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -7,7 +7,6 @@ import { CoverImage } from '@/features/covers/CoverImage'
 import { filterBookItems, parseStatus, selectBookListItems, STATUS_FILTERS, type BookListItem, type StatusFilter } from '@/features/books/bookList'
 import { StatusBadge } from '@/features/books/StatusBadge'
 import { useIsDesktop } from '@/lib/useMediaQuery'
-import { cn } from '@/lib/utils'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadAll } from '@/store/libraryThunks'
 
@@ -111,18 +110,12 @@ export function BookListPage() {
     <section aria-labelledby="books-heading" className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h1 id="books-heading" className="font-display text-xl font-bold">Books</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => void dispatch(loadAll())} disabled={library.status === 'loading'}>
-            <RefreshCw className={cn(library.status === 'loading' && 'animate-spin motion-reduce:animate-none')} aria-hidden />
-            Refresh
-          </Button>
-          <Button asChild size="sm">
-            <Link to="/books/new">
-              <Plus aria-hidden />
-              Add book
-            </Link>
-          </Button>
-        </div>
+        <Button asChild size="sm">
+          <Link to="/books/new">
+            <Plus aria-hidden />
+            Add book
+          </Link>
+        </Button>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

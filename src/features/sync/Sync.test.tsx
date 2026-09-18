@@ -30,8 +30,28 @@ async function borrowDune(user: ReturnType<typeof renderApp>['user'], name = 'Ra
 describe('Sync control', () => {
   it('has a Sync button and no pending indicator when nothing is waiting', async () => {
     renderApp({ sheets: library() })
-    expect(await screen.findByRole('button', { name: 'Sync' })).toBeEnabled()
+    await screen.findByText('Dune')
+    expect(screen.getByRole('button', { name: 'Sync' })).toBeEnabled()
     expect(screen.queryByText(/pending/)).not.toBeInTheDocument()
+  })
+
+  it('explains what it does, and shows it is busy (disabled and spinning) while the library loads', async () => {
+    const sheets = library()
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    const slow: typeof fetch = async (input, init) => {
+      await gate
+      return sheets.fetch(input, init)
+    }
+    renderApp({ sheets, fetchImpl: slow })
+    const button = await screen.findByRole('button', { name: 'Sync' })
+    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('title', 'Send unsent changes to your Sheet, then reload from it')
+    expect(button.querySelector('svg')).toHaveClass('animate-spin')
+    release()
+    await screen.findByText('Dune')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sync' })).toBeEnabled())
+    expect(screen.getByRole('button', { name: 'Sync' }).querySelector('svg')).not.toHaveClass('animate-spin')
   })
 
   it('Sync with nothing queued just reloads from the Sheet', async () => {

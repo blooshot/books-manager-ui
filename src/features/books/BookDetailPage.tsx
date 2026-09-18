@@ -6,6 +6,7 @@ import { BorrowHistory } from '@/features/books/BorrowHistory'
 import { StatusBadge } from '@/features/books/StatusBadge'
 import { BookActions } from '@/features/loans/BookActions'
 import { CoverImage } from '@/features/covers/CoverImage'
+import { formatTimestamp } from '@/lib/datetime'
 import { formatMoney } from '@/lib/format'
 import { useAppSelector } from '@/store/hooks'
 import { booksSelectors, loansSelectors, selectOpenLoanByBookId } from '@/store/selectors'
@@ -83,7 +84,7 @@ export function BookDetailPage() {
             <Field label="Purchase date" mono>{book.purchaseDate ?? '—'}</Field>
             <Field label="Price paid" mono>{formatMoney(book.pricePaid)}</Field>
             <Field label="Market price" mono>{formatMoney(book.marketPrice)}</Field>
-            <Field label="Added" mono>{book.addedAt ?? '—'}</Field>
+            <Field label="Added" mono>{book.addedAt ? formatTimestamp(book.addedAt) : '—'}</Field>
           </dl>
         </div>
       </div>

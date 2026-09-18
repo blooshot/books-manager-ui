@@ -1,5 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { formatTimestamp } from '@/lib/datetime'
 import { FakeSheets } from '@/test/fakeSheets'
 import { bookRow, loanRow } from '@/test/fixtures'
 import { renderApp } from '@/test/render'
@@ -31,7 +32,8 @@ describe('book detail', () => {
     expect(within(details).getByText('2025-12-31')).toBeInTheDocument()
     expect(within(details).getByText(/500\.00/)).toBeInTheDocument()
     expect(within(details).getByText(/1,200\.50/)).toBeInTheDocument()
-    expect(within(details).getByText('2026-01-01T00:00:00.000Z')).toBeInTheDocument()
+    expect(within(details).getByText(formatTimestamp('2026-01-01T00:00:00.000Z'))).toBeInTheDocument()
+    expect(within(details).queryByText('2026-01-01T00:00:00.000Z')).not.toBeInTheDocument() // not the raw ISO string
     expect(within(details).getByRole('img', { name: 'Cover of Dune' })).toHaveAttribute('src', 'blob:cover/1aBcDeFgHiJkLmNoPqRsTuVwXyZ123456/full')
     expect(within(details).getByText('Borrowed', { selector: '[data-slot="badge"]' })).toBeInTheDocument()
     expect(within(details).getByText(/with Asha since/)).toBeInTheDocument()

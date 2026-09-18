@@ -97,6 +97,8 @@ export const flows = [
       await click(page, /^Save book$/)
       await waitForHash(page, '#/books/B-0004')
       await waitForText(page, 'Neuromancer')
+      const added = await page.evaluate(() => [...document.querySelectorAll('dt')].find((dt) => dt.textContent === 'Added')?.nextElementSibling?.textContent)
+      expect(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(added ?? ''), `Added should read like 2026-09-19 14:05, got ${added}`)
       const row = world.sheets.Books.at(-1)
       expectEqual(row.slice(0, 5), ['B-0004', 'Neuromancer', 'William Gibson', '', '300'], 'row written to the Books tab')
       expect(/^\d{4}-\d{2}-\d{2}T/.test(row[7]), 'Added at should be the ISO timestamp, stored as text')
@@ -165,6 +167,9 @@ export const flows = [
         sideScroll: document.documentElement.scrollWidth > window.innerWidth,
       }))
       expectEqual(phone, { sidebar: false, bottomNav: true, sideScroll: false }, 'phone layout')
+      const controls = await visibleButtons(page)
+      expectEqual(controls.filter((label) => label === 'Sync').length, 1, 'exactly one Sync control')
+      expect(!controls.includes('Refresh'), 'the list should not have a second, look-alike Refresh button')
 
       await page.setViewport({ width: 1280, height: 800 })
       await waitFor(page, () => document.querySelector('aside'))
