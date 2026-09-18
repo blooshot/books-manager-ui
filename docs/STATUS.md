@@ -4,7 +4,7 @@ Read this after `AGENTS.md` at the start of every session; update it at the end
 of every session or milestone (protocol in `AGENTS.md`; how to keep it consistent: `conductor/workflow.md`).
 Newest entries at the top of "Log". Keep it short and factual.
 
-**Last updated:** 2026-09-19 · **By:** Claude Code (step 6c)
+**Last updated:** 2026-09-19 · **By:** Claude Code (step 7)
 
 ## Where we are
 
@@ -20,12 +20,12 @@ Build order (from `AGENTS.md`):
 | 5b | Wire photos into the store (upload-before-row, replace = rename, cover loading + cache) | **Done** (Claude) — fake Sheets + fake Drive only |
 | 6a | Screens: shell + routing, book list (search/filter), book detail + borrow history, covers, notices | **Done** (Claude, committed `1c54d18`) — fake Sheets/Drive, jsdom only |
 | 6b | Screens: add/edit book form with photo capture, form drafts | **Done** (Claude, committed `c7510da`) — fake Sheets/Drive, jsdom only |
-| 6c | Screens: borrow / return, Lent out | **Done** (Claude) — fake Sheets/Drive, jsdom only; awaiting review |
-| 7 | Outbox + Sync button | **Next** (brief below) |
-| 8 | Protected range on `Books` (verify owner behaviour, ADR-0004) | Not started, needs the real Sheet |
-| 9 | Deploy + CI/CD | Not started |
+| 6c | Screens: borrow / return, Lent out | **Done** (Claude, committed `1ff697f`) — fake Sheets/Drive, jsdom only |
+| 7 | Outbox + Sync button | **Done** (Claude) — fakes only; awaiting review |
+| 8 | Protected range on `Books` (verify owner behaviour, ADR-0004) | **Next**, owner-driven (brief below) — needs the real Sheet |
+| 9 | Deploy + CI/CD | Not started (brief below) |
 
-`npm run verify` passes: **365 tests in 29 files**, build OK, 1 known lint warning (generated `button.tsx`).
+`npm run verify` passes: **451 tests in 33 files**, build OK, 1 known lint warning (generated `button.tsx`).
 
 ## What exists
 
@@ -110,6 +110,20 @@ selectors (`selectOpenLoanByBookId`, `selectLentOutByBorrower`). Fusion tokens i
 - `index.css`: dialog/sheet/accordion motion from the Fusion duration tokens, which `prefers-reduced-motion` zeroes.
 - Tests: `BorrowReturn.test.tsx` (20), `LentOutPage.test.tsx` (9), `loanForm.test.ts` (25) incl. a full journey (borrow -> Lent out -> return -> gone). Control checks on five behaviours red -> green.
 
+**Step 7** — outbox + Sync (design and reasoning: ADR-0006 "Outbox design"):
+- `src/services/outbox/`: `types.ts` (ops: addBook / editBook / borrow / return; `OutboxRecord`, `OutboxStorage`), `indexedDbOutbox.ts` (IndexedDB `BookOutbox`, photo bytes as `ArrayBuffer` + type, every failure -> `OutboxUnavailableError`),
+  `pending.ts` (`applyPending` overlay, `describeOp`). `lib/storedBlob.ts` is shared with the cover cache. `google/errors.ts`: `isRetryableFailure` (expired token or `NETWORK` only).
+- Thunks (`store/libraryThunks.ts`, rewritten): on a retryable failure `addBook` / `editBook` / `borrowBook` / `returnBook` **keep the optimistic change and queue the operation** (`SAVED_OFFLINE_NOTICE`); any other failure rolls back and rejects as before. If nothing can be
+  stored, the original error is reported and the change undone. `addBook` resolves `{ queued: true, id: '' }` (no Book ID yet; the form goes back to the list).
+- `store/outboxThunks.ts`: `loadOutbox`, `flushOutbox` (strictly in order; a retryable failure stops the flush, a permanent one marks that entry `failed` with the reason and continues; guarded against concurrent runs), `syncAll` (flush, then reload; notices for a stopped or partly failed
+  sync), `startSync` (sign-in and reconnect: read the queue, send it if anything waits, otherwise just load), `discardEntry`, `retryEntry`. `loadAll` overlays pending entries so Refresh/reload never hides a queued change.
+- Retries are idempotent (`WriteOptions.idempotent` in `sheets/api.ts`): add found by `Added at` (now written as **forced text**), borrow by book + borrower + date + time, an already-applied return recognised; an uploaded cover's file ID is remembered and reused.
+- Shared write helpers moved to `store/writeSupport.ts`; `store/thunkExtra.ts` adds `outbox` to the thunk `extra` (`makeStore` defaults to the IndexedDB outbox; tests inject `MemoryOutbox` / `UnavailableOutbox`).
+- UI: `sync/SyncControl` in the header ("N pending" attention badge linking to `/pending`, "N failed" danger badge, **Sync** button; disabled while syncing or when the session has expired), `sync/PendingChangesPage` (`/pending`: what is waiting, why a change failed, Retry, two-step Discard),
+  `AppLayout` calls `startSync` on sign-in/reconnect. `Badge` gained `attention` and `danger` variants.
+- Tests: `store/outbox.test.ts` (34: queueing, ordering, partial failure, conflicts, expired token, concurrent flush, **lost-response retries for add/borrow/return/photo**, startup from a stored queue, overlay, discard/retry), `services/outbox/*.test.ts` (IndexedDB, overlay, retryable classification),
+  `features/sync/Sync.test.tsx` (18: offline borrow/return/add/edit journeys, reload while offline and online, reconnect, conflict, pending page). Control checks: 8 on the outbox logic, 6 on the UI, plus the `Added at` fix, all red -> green.
+
 **Guards/conventions** — `src/test/no-delete.test.ts`: no delete/clear/`trashed:true`/trash/`FormData` upload; Sheets endpoint
 allow-list; Drive method allow-list and PATCH-only-rename. `src/test/conventions.test.ts`: no raw storage outside `lib/storage.ts`,
 no `any`, default exports only for App/main/slices.
@@ -128,6 +142,11 @@ no `any`, default exports only for App/main/slices.
 - **The UI has never been seen in a browser:** layout at phone/desktop widths, dark mode, the Fusion look, focus rings, hover lift, `prefers-reduced-motion`, keyboard use,
   and the sidebar/bottom-nav switch at the 768px breakpoint. jsdom has no CSS or layout, so tests cover behaviour and accessibility roles only; `useMediaQuery` is driven by a stand-in.
 - **Covers on screen:** the list/detail *display* covers through a stub loader in tests. `createBrowserCoverLoader` (real object URLs, real IndexedDB, canvas thumbnails) has never run in a browser.
+- **The outbox has only run against `MemoryOutbox` and `fake-indexeddb`**, never real IndexedDB in Safari/Chrome/Firefox (quota, private windows, the connection closing between calls, storage eviction), and never against real network loss or a real 401. The "lost response"
+  retries are simulated by a fake that applies a write and then throws.
+- **Idempotency depends on how the Sheet formats things.** `Added at` is forced text so an add retry always matches. Borrow and return retries match on the date and time as *displayed*, so the `Borrowed date` / `Returned date` columns must be formatted `yyyy-mm-dd` and the time
+  columns `HH:mm` (Format -> Number -> Custom). If they are not, a retry that follows a lost response ends up as a `failed` entry ("already borrowed"/"not currently borrowed") for the user to discard, never as a duplicate row. Rows added by steps 4-6 before this change have an `Added at` in
+  whatever format Sheets chose; that only matters for retrying those (there are none yet).
 - **Dialogs, sheets and the accordion have never been seen or used in a browser:** the bottom-sheet slide, focus handling on real devices, the native date/time pickers and `datalist` suggestions on iOS/Android, animation timing,
   and `prefers-reduced-motion` behaviour. jsdom covers roles, focus targets, and behaviour only. `useIsDesktop` is driven by a stand-in in tests.
 - **Photo capture has never been tried with a real camera or real image:** `createCoverVariants` (canvas, `createImageBitmap`, EXIF rotation, JPEG encoding) is tested only with stand-ins under jsdom; the
@@ -152,6 +171,11 @@ no `any`, default exports only for App/main/slices.
 - **Testing Library queries in this UI** are ambiguous by design (a "Books" heading, nav link and back link; "Borrowed" as badge, filter button, and history text). Scope with `within(...)`, list names
   (`getByRole('list', { name: 'Books' })`), or `{ selector: '[data-slot="badge"]' }`.
 - **Lint:** `react/only-export-components` is off for `src/test/**` and `*.test.tsx` (`.oxlintrc.json` overrides); production files must still keep components and non-components apart.
+- **Retryable means "nothing happened" or "unknown".** A 401 wrote nothing; a network failure may have written and lost the response. Only idempotent sends may be retried (ADR-0006). Never widen `isRetryableFailure` to 5xx/4xx.
+- **`addBook` may resolve with `queued: true` and an empty `id`.** Code that navigates to the new book must check `queued` first.
+- **Errors that used to roll back now queue.** An expired session no longer fails a save; it saves locally and the "N pending" indicator appears. Tests written for the old behaviour had to change (borrow dialog, add form, photo thunk).
+- **`FakeSheets` parses ISO datetimes like real Sheets** (stores them as a US-style date-time); a value that must round-trip exactly must be forced text. Do not loosen that.
+- **`renderApp` uses an in-memory outbox by default** (`outbox` option to inject one, `UnavailableOutbox` for the fallback); `makeStore` alone uses IndexedDB, which is absent in most test files (queueing then falls back to rollback).
 - **UI must not unmount an editing surface because of the data it edits.** Borrowing flips the book to "borrowed" optimistically, which used to unmount the Borrow dialog mid-save (state and error lost; a blank dialog reappeared on failure).
   Keep dialogs mounted independent of the optimistic state, and remember what a dialog operates on when it opens.
 - **Radix modals hide the rest of the page from assistive tech** (`aria-hidden` on everything outside), so `getByRole` cannot see the app behind an open dialog; query it by text, or close the dialog first.
@@ -173,26 +197,27 @@ no `any`, default exports only for App/main/slices.
 - Owner's local files (not committed on purpose): `THE-LAST-SYNC.txt`, and a `.gitignore` line for it whose path
   (`books-management/THE-LAST-SYNC.txt`) is wrong relative to the repo root — it should read `THE-LAST-SYNC.txt`.
 
-## Next: step 7 brief — outbox + Sync button (ADR-0006, `AGENTS.md` > Data flow)
+## Next: step 8 brief — protected range on `Books` (owner-driven; ADR-0004)
 
-Read `conductor/code_styleguides/` first. Same flow and gates. This is the riskiest remaining logic (persistence + retries around real writes); tests must be strong (fake Sheets/Drive, control checks).
+Goal: verify, on a **scratch copy** of the Sheet, what the protected range really does, then apply it to the real one and correct ADR-0004 with the facts. This cannot be done from tests.
+1. Make a copy of the library Sheet. In it: Data -> Protect sheets and ranges -> the `Books` tab. Try both modes: "Show a warning when editing this range" and "Restrict who can edit" (only you).
+2. With the **owner's own OAuth token** (dev app signed in as the owner, or the API Explorer), try what the app would never do: `values:clear`, `deleteDimension` on a row, and an ordinary `values:batchUpdate` on a protected cell. Record which succeed.
+   Expectation to confirm or refute: the protection does **not** stop the owner (ADR-0004 already says so), and a *different* account (a second Google account given edit access) is blocked in "restrict" mode.
+3. Update ADR-0004 "Consequences" with the observed behaviour and the mode chosen. Apply the chosen protection to the real Sheet. Do not add any code that deletes or clears; the guard tests stay as they are.
+Claude can prepare a checklist/script for step 2 on request; running it needs the owner's Google account.
 
-- **What goes in the outbox:** a write that failed because of an expired token (`SessionExpiredError`) or no network (`code: 'NETWORK'`); nothing else (validation errors, 4xx/5xx and stale-list errors are surfaced, not queued).
-  Operations: add book (with photo), edit book (with photo), borrow, return. Persist in **IndexedDB** (photos are Blobs; store bytes as `ArrayBuffer` + type like the cover cache), never localStorage; never store the token.
-- **Photo uploads:** decide and document the order so a retry does not create duplicate covers: upload the cover and remember its Drive file ID **before** attempting the row write, so a retry reuses it (see the photo-flow gotcha). The row write is
-  the only step that must not run twice; make retries idempotent where possible (e.g. detect an already-appended book/loan before appending again) and say so in an ADR update.
-- **UI:** "N pending" indicator (use `bg-attention`, never `danger`), a **Sync** button that flushes the queue in order then reloads from the Sheet, per-item failure reasons, and the ability to see what is pending. The reconnect banner's Reconnect should
-  trigger a flush after a successful sign-in. Sync is disabled while running and while the token is expired.
-- **Ordering and conflicts:** flush strictly in order (a borrow queued after an add of the same book depends on it; the temporary Book ID problem: an offline-added book has no ID until it is written, so dependent operations must reference the queue entry, not a
-  Book ID). If that is too complex, restrict what can be queued and document why in the ADR.
-- **Tests:** queue persistence across reload (IndexedDB), flush order, retry after reconnect, no double-writes on retry (row appended once, one cover uploaded once), partial failure leaves the rest queued, non-retryable errors are not queued, the token never lands in
-  storage, Sync disabled states, "N pending" display, storage unavailable (must not crash; say so). Control-check each. Browser-only bits go under **Not verified**.
-- **Acceptance:** all green; `npm run verify` on the final code; ADR-0006 updated; STATUS.md updated per `conductor/workflow.md` with a Completion Report.
+## Next after that: step 9 brief — deploy + CI/CD
 
-Then step 8 (protected range; needs the real Sheet) and step 9 (deploy + CI/CD).
+Decisions needed first: static host (Cloudflare Pages / Netlify / GitHub Pages) and the deployed origin. Then: a GitHub Actions workflow on push to `main`: `npm ci` -> `npm run verify` -> `npm run build` (with `VITE_GOOGLE_CLIENT_ID`, `VITE_SHEET_ID`, `VITE_CURRENCY` from repository variables; none is a secret)
+-> deploy `dist/`. Hash routing means no rewrite rules; for a GitHub Pages *project* site set Vite's `base` to `/<repo>/`. Add the deployed origin to the OAuth client's authorised JavaScript origins. Consider security headers (CSP allowing `accounts.google.com`,
+`sheets.googleapis.com`, `www.googleapis.com`; `frame-ancestors 'none'`) on the host. Record the choices in a new ADR. Note: CI can only prove `verify`; it cannot prove real Google sign-in works on the deployed origin (an owner check).
 
 ## Log
 
+- 2026-09-19 — Claude Code: **step 7 done (awaiting owner review).** Outbox in IndexedDB; retryable failures (expired token, no network) keep the optimistic change and queue it; ordered, idempotent flush on sign-in, reconnect, and Sync; Pending changes page; header pending/failed indicator.
+  **Verified:** `npm run verify` on the final code: 451 tests / 33 files, build OK, 1 known lint warning; 14 control checks red -> green (8 outbox logic, 6 UI) plus the `Added at` regression. **Found and fixed:** `Added at` (the add-retry key) would not have round-tripped through real Sheets (ISO datetimes are parsed), which would have
+  made a retried add append a duplicate; the fake now models that and the value is forced text. Also: rewrote a vacuous "Syncing…" test and fixed a request-count assertion. **Not verified:** real IndexedDB in browsers, real network/401, real Sheet date/time formatting (see Not verified). **Deviations:** none from the brief; an offline-added book
+  appears only in the pending list until sent (no temp IDs). **Follow-ups:** step 8 (owner), step 9.
 - 2026-09-19 — Claude Code: **step 6c done (awaiting owner review).** Borrow / one-tap return / backdated return dialogs (dialog on desktop, bottom sheet on phone), borrower autocomplete, Lent out accordion screen and nav item, stale-list and
   expired-session handling. **Verified:** `npm run verify` on the final code: 365 tests / 29 files, build OK, 1 known lint warning; five control checks red -> green. **Found and fixed by the tests:** the optimistic status flip unmounted the Borrow dialog
   mid-save (state lost, blank reappearance on failure); also removed a placeholder assertion I had left in a test. **Not verified:** real browser, real devices/pickers, real Google. **Deviations:** none from the brief. **Follow-ups:** step 7.

@@ -26,3 +26,13 @@ export class SessionExpiredError extends GoogleApiError {
     this.name = 'SessionExpiredError'
   }
 }
+
+/**
+ * Whether a failed write is worth queueing for later: the token expired (nothing was written) or the network
+ * failed. Anything else (validation, conflicts, 4xx/5xx) is reported to the user instead, because retrying
+ * it unchanged would not help.
+ */
+export function isRetryableFailure(error: unknown): boolean {
+  return error instanceof SessionExpiredError || (error instanceof GoogleApiError && error.code === 'NETWORK')
+}
+

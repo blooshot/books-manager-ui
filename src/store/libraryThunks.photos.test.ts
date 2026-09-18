@@ -7,6 +7,7 @@ import { addBook, editBook } from '@/store/libraryThunks'
 import { booksSelectors } from '@/store/selectors'
 import { signIn } from '@/store/sessionSlice'
 import { FakeDrive } from '@/test/fakeDrive'
+import { MemoryOutbox } from '@/test/fakeOutbox'
 import { FakeSheets } from '@/test/fakeSheets'
 
 const NOW = new Date(2026, 8, 18, 14, 5)
@@ -33,7 +34,7 @@ const routedFetch: typeof fetch = (input, init) => {
 }
 
 function signedInStore(): AppStore {
-  const store = makeStore({ sheetId: 'sheet-1', fetchImpl: routedFetch, now: () => NOW })
+  const store = makeStore({ sheetId: 'sheet-1', fetchImpl: routedFetch, now: () => NOW, outbox: new MemoryOutbox() })
   store.dispatch(
     signIn.fulfilled({ accessToken: 'test-token', expiresAt: NOW.getTime() + 3_600_000, email: 'me@example.com' }, 'req', undefined),
   )
@@ -124,15 +125,17 @@ describe('addBook with a photo', () => {
     expect(log).toHaveLength(0)
   })
 
-  it('marks the session expired and writes nothing when Drive says the token is no longer valid', async () => {
+  it('when Drive says the token is no longer valid: marks the session expired, writes nothing, and queues the book with its photo', async () => {
     const store = signedInStore()
     drive.token = 'a-different-token' // Sheets still accepts the token, Drive does not
-    await expect(store.dispatch(addBook({ title: 'Dune', author: 'Herbert', photo: photo([1], [2]) })).unwrap()).rejects.toMatchObject({
-      name: 'SessionExpiredError',
-    })
+    const saved = await store.dispatch(addBook({ title: 'Dune', author: 'Herbert', photo: photo([1], [2]) })).unwrap()
+
+    expect(saved.queued).toBe(true)
     expect(store.getState().session.status).toBe('expired')
     expect(sheets.tabs.Books).toHaveLength(1)
     expect(booksSelectors.selectTotal(store.getState())).toBe(0)
+    expect(store.getState().outbox.entries).toHaveLength(1)
+    expect(store.getState().outbox.entries[0].op).toMatchObject({ kind: 'addBook', hasPhoto: true })
   })
 
   it('replaces a stale cached folder ID instead of failing', async () => {

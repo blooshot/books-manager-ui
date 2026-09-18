@@ -9,7 +9,8 @@ import { readStored, writeStored } from '@/lib/storage'
 import { useIsDesktop } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { loadAll } from '@/store/libraryThunks'
+import { SyncControl } from '@/features/sync/SyncControl'
+import { startSync } from '@/store/outboxThunks'
 import { signOut } from '@/store/sessionSlice'
 
 interface NavItem {
@@ -82,9 +83,9 @@ export function AppLayout() {
   const sessionStatus = useAppSelector((s) => s.session.status)
   const email = useAppSelector((s) => s.session.email)
 
-  // Load on sign-in, and again after a reconnect (AGENTS.md > Data flow)
+  // On sign-in, and again after a reconnect: send anything waiting in the outbox, then load (AGENTS.md > Data flow)
   useEffect(() => {
-    if (sessionStatus === 'signedIn') void dispatch(loadAll())
+    if (sessionStatus === 'signedIn') void dispatch(startSync())
   }, [sessionStatus, dispatch])
 
   return (
@@ -97,6 +98,7 @@ export function AppLayout() {
             <Link to="/" className="font-display text-lg font-bold">My Library</Link>
             <div className="flex items-center gap-2">
               {email && <span className="hidden font-mono text-xs text-muted-foreground sm:inline">{email}</span>}
+              <SyncControl />
               <ThemeToggle />
               <Button variant="outline" size="sm" onClick={() => void dispatch(signOut())}>Sign out</Button>
             </div>

@@ -74,7 +74,8 @@ function BookForm({ book }: { book?: Book }) {
       } else {
         const saved = await dispatch(addBook({ ...toNewBookInput(values), photo: photo ?? undefined })).unwrap()
         clearDraft()
-        navigate(`/books/${saved.id}`)
+        // A book that could only be queued has no Book ID yet: go back to the list, where the pending badge shows it
+        navigate(saved.queued ? '/' : `/books/${saved.id}`)
       }
     } catch (error) {
       setSaveError(describeSaveError(error as { name?: string; message?: string }))

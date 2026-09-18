@@ -32,11 +32,14 @@ Everything talks to Google from the browser with the user's own token (ADR-0002)
 ## Errors
 - Use `src/services/google/errors.ts` (`GoogleApiError`, shared `SessionExpiredError`). Map 401 -> `SessionExpiredError`,
   403 -> the API's permission error, network failure -> `code: 'NETWORK'`, everything else -> the API error with status and message.
-- Only `SessionExpiredError` and `NETWORK` are retryable by the outbox. Never blind-retry a non-idempotent write.
+- Only `SessionExpiredError` and `NETWORK` are retryable (`isRetryableFailure`), and only by the outbox. A `NETWORK` failure is ambiguous (the write may have happened), so a retried write must be idempotent (see ADR-0006);
+  never blind-retry a non-idempotent write.
 
 ## Sheets specifics
 - Find columns by **header name**, rows by **Book ID**, never by position. Writes re-read first.
 - Write with `USER_ENTERED`, read with `FORMATTED_VALUE`; escape text starting with `= + - @` so it is stored as text.
+- A value that must read back **exactly** as written (an idempotency key such as `Added at`) must be written as forced text (leading `'`): Sheets parses ISO datetimes and dates typed via `USER_ENTERED`
+  and reads them back in the cell's display format. `FakeSheets` models this; keep it strict.
 - Update only the cells that changed (never a whole row: unknown columns belong to the owner).
 - Sheet writes run one at a time (`inWriteQueue`) because each derives something from a fresh read.
 

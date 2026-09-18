@@ -159,7 +159,7 @@ describe('borrow dialog', () => {
     expect(badge()).toHaveTextContent('Borrowed')
   })
 
-  it('on an expired session keeps the dialog and what was typed, says to reconnect, and saves nothing', async () => {
+  it('on an expired session saves the loan on this device instead: the dialog closes, it shows as borrowed, and it is queued', async () => {
     const sheets = library()
     const { user, dlg, store } = await openBorrow({ sheets })
     await user.type(within(dlg).getByLabelText(/^Borrower/), 'Ravi')
@@ -168,16 +168,14 @@ describe('borrow dialog', () => {
     })
     await user.click(within(dlg).getByRole('button', { name: 'Borrow' }))
 
-    const alert = await within(dlg).findByRole('alert')
-    expect(alert).toHaveTextContent(/reconnect/i)
-    expect(alert).toHaveTextContent(/nothing was saved/i)
-    expect(alert).not.toHaveTextContent(/out of date/i)
-    expect(within(dlg).queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument()
-    expect(within(dlg).getByLabelText(/^Borrower/)).toHaveValue('Ravi')
-    expect(store.getState().session.status).toBe('expired')
-    expect(screen.getByText(/Session expired/)).toBeInTheDocument() // the reconnect banner behind the dialog
-    expect(loanRows(sheets)).toHaveLength(0)
-    expect(badge()).toHaveTextContent('Available')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(badge()).toHaveTextContent('Borrowed')
+    expect(screen.getByText(/with Ravi since/)).toBeInTheDocument()
+    expect(screen.getByText(/Saved on this device/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Pending changes: 1 waiting/ })).toBeInTheDocument()
+    expect(screen.getByText(/Session expired/)).toBeInTheDocument() // the reconnect banner
+    expect(store.getState().outbox.entries).toHaveLength(1)
+    expect(loanRows(sheets)).toHaveLength(0) // nothing reached the Sheet yet
   })
 
   it('keeps the dialog open, with its state, while the save is in flight (the book flips to Borrowed optimistically)', async () => {

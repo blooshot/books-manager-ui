@@ -42,3 +42,11 @@ Add a row whenever a review finds something the process should have caught. Keep
 | The Borrow dialog was rendered only for available books; the optimistic update flipped the status mid-save and unmounted it (state and error lost, blank dialog on failure). Found by a failing test | Keep dialogs/forms mounted independent of the data they change; remember what a dialog operates on when it opens (typescript.md, React) |
 | A placeholder assertion (`expect(true).toBe(true)`) was left in a test while iterating | Never leave a tautology behind; grep for it before finishing (testing.md rule 1) |
 
+## Step 7 (Claude Code), for the record
+
+| What went wrong | Rule now |
+|---|---|
+| The idempotency key for a retried add (`Added at`) was written as an ISO string; real Sheets parses it into a date value and reads it back differently, so a retry would have appended a duplicate row. The fake did not model this, so every test passed | When a design relies on a value round-tripping, make the fake model the real service's parsing first, watch a test fail, then fix (testing.md rule 3); write such values as forced text (google-apis.md) |
+| A test ("Syncing…") passed while asserting almost nothing (it swallowed a failure and checked nothing about the in-flight state) | After writing tests, re-read each for what it can fail on; hold the operation in flight and assert on it (testing.md rule 1) |
+| Counting `batchGet` requests could not tell a reload from the flush's own read | Assert on the observable state (library status) rather than on request counts when several code paths make the same request |
+

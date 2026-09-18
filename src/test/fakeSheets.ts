@@ -116,10 +116,19 @@ export class FakeSheets {
     })
   }
 
-  /** What Sheets stores for a USER_ENTERED value. */
+  /**
+   * What Sheets stores for a USER_ENTERED value. Like typing into the Sheet:
+   *  - a leading apostrophe forces plain text (and is not stored);
+   *  - an ISO datetime such as 2026-09-18T14:05:00.000Z is parsed into a date-time value, and reads back in the
+   *    cell's display format (the default, US-style, here), NOT as the string that was written.
+   *    Code that needs a value to round-trip exactly must force it to text.
+   */
   private store(value: string | number): string {
     const s = String(value)
-    return s.startsWith("'") ? s.slice(1) : s
+    if (s.startsWith("'")) return s.slice(1)
+    const iso = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?Z$/.exec(s)
+    if (iso) return `${Number(iso[2])}/${Number(iso[3])}/${iso[1]} ${Number(iso[4])}:${iso[5]}:${iso[6]}`
+    return s
   }
 }
 

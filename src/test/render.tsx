@@ -7,9 +7,11 @@ import App, { AppRoutes } from '@/App'
 import { CoverProvider } from '@/features/covers/CoverProvider'
 import { setClockForTests } from '@/lib/clock'
 import type { CoverLoader } from '@/services/drive/covers'
+import type { OutboxStorage } from '@/services/outbox/types'
 import { makeStore, type AppStore } from '@/store'
 import { signIn } from '@/store/sessionSlice'
 import { FakeDrive } from '@/test/fakeDrive'
+import { MemoryOutbox } from '@/test/fakeOutbox'
 import { FakeSheets } from '@/test/fakeSheets'
 import { setViewport, type Viewport } from '@/test/viewport'
 
@@ -32,6 +34,8 @@ export interface RenderAppOptions {
   fullApp?: boolean
   loader?: CoverLoader
   fetchImpl?: typeof fetch
+  /** Where queued writes go. Defaults to an in-memory outbox (a real one would use IndexedDB). */
+  outbox?: OutboxStorage
 }
 
 /** A stand-in cover loader: resolves `blob:cover/<fileId>/<variant>` without touching Drive or IndexedDB. */
@@ -52,7 +56,8 @@ export function renderApp(options: RenderAppOptions = {}) {
 
   setViewport(options.viewport ?? 'phone')
   setClockForTests(NOW)
-  const store: AppStore = makeStore({ sheetId: 'sheet-1', fetchImpl: routed, now: () => NOW })
+  const outbox = options.outbox ?? new MemoryOutbox()
+  const store: AppStore = makeStore({ sheetId: 'sheet-1', fetchImpl: routed, now: () => NOW, outbox })
   if (!options.signedOut) {
     store.dispatch(
       signIn.fulfilled({ accessToken: 'test-token', expiresAt: NOW.getTime() + 3_600_000, email: 'me@example.com' }, 'req', undefined),
@@ -74,5 +79,5 @@ export function renderApp(options: RenderAppOptions = {}) {
       </MemoryRouter>
     </Provider>,
   )
-  return { ...view, store, sheets, drive, loader, user }
+  return { ...view, store, sheets, drive, loader, user, outbox }
 }

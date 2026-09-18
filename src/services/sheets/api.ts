@@ -30,6 +30,14 @@ import {
  * Books are append-only (ADR-0004): there is no delete/clear here, by design.
  */
 
+/**
+ * `idempotent`: this call may be a retry of one that already succeeded (the network dropped the response),
+ * so if the write is already in the Sheet, return it instead of writing it again. Used only by the outbox.
+ */
+export interface WriteOptions {
+  idempotent?: boolean
+}
+
 export interface LibraryData {
   books: Book[]
   loans: Loan[]
@@ -71,11 +79,17 @@ export async function appendBook(
   input: NewBookInput,
   now: Date = new Date(),
   beforeAppend?: (bookId: string) => Promise<string | undefined>,
+  options: WriteOptions = {},
 ): Promise<Book> {
   const title = requireText(input.title, 'Title')
   const author = requireText(input.author, 'Author')
   const [values] = await client.batchGet([BOOKS_TAB])
   const table = parseBooks(values)
+  if (options.idempotent) {
+    // A retry of a write that may already have gone through (e.g. the response was lost): `Added at` is the key.
+    const already = table.rows.find((r) => r.value.addedAt === now.toISOString() && r.value.title === title)
+    if (already) return already.value
+  }
   const id = nextBookId(table.rows.map((r) => r.value.id))
   const uploadedPhotoUrl = beforeAppend ? await beforeAppend(id) : undefined
   const book: Book = {
@@ -149,13 +163,23 @@ function rowFromRange(range: string | undefined): number | undefined {
   return match ? Number(match[1]) : undefined
 }
 
-export async function appendLoan(client: SheetsClient, input: NewLoanInput, now: Date = new Date()): Promise<Loan> {
+export async function appendLoan(client: SheetsClient, input: NewLoanInput, now: Date = new Date(), options: WriteOptions = {}): Promise<Loan> {
   const borrowerName = requireText(input.borrowerName, 'Borrower name')
   const [booksValues, loansValues] = await client.batchGet([BOOKS_TAB, BORROWERS_TAB])
   const books = parseBooks(booksValues)
   const loans = parseLoans(loansValues)
 
   if (!books.rows.some((r) => r.value.id === input.bookId)) throw new BookNotFoundError(input.bookId)
+  if (options.idempotent && input.borrowedDate && input.borrowedTime) {
+    const already = loans.rows.find(
+      (r) =>
+        r.value.bookId === input.bookId &&
+        r.value.borrowerName === borrowerName &&
+        r.value.borrowedDate === input.borrowedDate &&
+        r.value.borrowedTime === input.borrowedTime,
+    )
+    if (already) return already.value
+  }
   const open = loans.rows.find((r) => r.value.bookId === input.bookId && !r.value.returnedDate)
   if (open) throw new AlreadyBorrowedError(input.bookId, open.value.borrowerName)
 
@@ -180,13 +204,21 @@ export interface ReturnInput {
 }
 
 /** Marks the book's open loan as returned (Returned = Yes plus date and time). */
-export async function returnLoan(client: SheetsClient, input: ReturnInput, now: Date = new Date()): Promise<Loan> {
+export async function returnLoan(client: SheetsClient, input: ReturnInput, now: Date = new Date(), options: WriteOptions = {}): Promise<Loan> {
   const [values] = await client.batchGet([BORROWERS_TAB])
   const table = parseLoans(values)
   const open: ParsedRow<Loan>[] = table.rows.filter((r) => r.value.bookId === input.bookId && !r.value.returnedDate)
   // Normally at most one; if hand-edits left several, close the most recent.
   const target = open.at(-1)
-  if (!target) throw new NotBorrowedError(input.bookId)
+  if (!target) {
+    if (options.idempotent && input.returnedDate && input.returnedTime) {
+      const already = table.rows
+        .filter((r) => r.value.bookId === input.bookId && r.value.returnedDate === input.returnedDate && r.value.returnedTime === input.returnedTime)
+        .at(-1)
+      if (already) return already.value
+    }
+    throw new NotBorrowedError(input.bookId)
+  }
 
   const returnedDate = input.returnedDate ?? formatDate(now)
   const returnedTime = input.returnedTime ?? formatTime(now)

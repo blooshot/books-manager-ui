@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SheetSchemaError } from '@/services/sheets/errors'
 import {
+  bookCells,
   buildRow,
   columnLetter,
   escapeText,
@@ -114,6 +115,17 @@ describe('parseLoans', () => {
     ])
     expect(table.rows[0].value).toMatchObject({ key: 'B-0001|2', returned: false, returnedDate: undefined })
     expect(table.rows[1].value).toMatchObject({ key: 'B-0002|3', returned: true, returnedDate: '2026-02-09', returnedTime: '18:15' })
+  })
+})
+
+describe('bookCells', () => {
+  it('writes Added at as forced text so the exact ISO string reads back (the outbox uses it as an idempotency key)', () => {
+    const cells = bookCells({ id: 'B-0001', title: 'Dune', author: 'Herbert', addedAt: '2026-09-18T14:05:00.000Z' })
+    expect(cells.addedAt).toBe("'2026-09-18T14:05:00.000Z")
+  })
+
+  it('leaves Added at empty when there is none', () => {
+    expect(bookCells({ id: 'B-0001', title: 'Dune', author: 'Herbert' }).addedAt).toBe('')
   })
 })
 

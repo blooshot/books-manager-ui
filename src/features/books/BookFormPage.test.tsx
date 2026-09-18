@@ -187,7 +187,7 @@ describe('saving problems', () => {
     await waitFor(() => expect(location()).toBe('/books/B-0001'))
   })
 
-  it('on an expired session: keeps the changes, explains, and shows the reconnect banner', async () => {
+  it('on an expired session: saves the book on this device, goes back to the list, and shows it as pending', async () => {
     const sheets = new FakeSheets()
     sheets.token = 'a-different-token' // Google rejects the token the app holds
     const { user, store } = renderApp({ route: '/books/new', sheets, drive })
@@ -195,10 +195,12 @@ describe('saving problems', () => {
     await fillAdd(user)
     await user.click(screen.getByRole('button', { name: 'Save book' }))
 
-    expect(await screen.findByText(/session has expired/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Reconnect' })).toBeInTheDocument()
-    expect(field(/^Title/)).toHaveValue('Dune')
-    expect(location()).toBe('/books/new')
+    await waitFor(() => expect(location()).toBe('/'))
+    expect(screen.getByText(/Saved on this device/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Pending changes: 1 waiting/ })).toBeInTheDocument()
+    expect(store.getState().outbox.entries[0]).toMatchObject({ status: 'pending', summary: 'Add “Dune” by Herbert' })
+    expect(sessionStorage.getItem(DRAFT_KEY)).toBeNull() // saved (locally), so the draft is done
+    expect(writes(sheets)).toHaveLength(0)
   })
 
   it('shows "Saving…" and locks the form while the request is in flight', async () => {

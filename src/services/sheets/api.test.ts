@@ -76,6 +76,28 @@ describe('appendBook', () => {
   })
 })
 
+describe('Added at round trip', () => {
+  it('reads back exactly what was written, even though Sheets parses ISO datetimes typed into a cell', async () => {
+    const book = await appendBook(client(), { title: 'Dune', author: 'Herbert' }, NOW)
+    const { books } = await readAll(client())
+    expect(books[0].addedAt).toBe(NOW.toISOString())
+    expect(books[0].addedAt).toBe(book.addedAt)
+  })
+
+  it('an idempotent retry of the same add finds the row it already wrote instead of appending a second', async () => {
+    const first = await appendBook(client(), { title: 'Dune', author: 'Herbert' }, NOW)
+    const again = await appendBook(client(), { title: 'Dune', author: 'Herbert' }, NOW, undefined, { idempotent: true })
+    expect(again.id).toBe(first.id)
+    expect(sheets.tabs.Books).toHaveLength(2)
+  })
+
+  it('without idempotency the same call does append another book (so the option is what prevents duplicates)', async () => {
+    await appendBook(client(), { title: 'Dune', author: 'Herbert' }, NOW)
+    await appendBook(client(), { title: 'Dune', author: 'Herbert' }, NOW)
+    expect(sheets.tabs.Books).toHaveLength(3)
+  })
+})
+
 describe('updateBook', () => {
   beforeEach(async () => {
     await appendBook(client(), { title: 'Dune', author: 'Herbert', marketPrice: 900 }, NOW)

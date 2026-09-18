@@ -4,27 +4,20 @@
  * The cache is only an optimisation: if IndexedDB is unavailable (private window, blocked
  * storage) reads return null and writes are skipped; nothing here throws.
  */
+import { fromStored, toStored, type StoredBlob } from '@/lib/storedBlob'
+
 const DB_NAME = 'BookCoversCache'
 const STORE_NAME = 'covers'
 const DB_VERSION = 1
 
 export type CoverVariant = 'full' | 'thumb'
 
-/** Bytes plus MIME type. Stored instead of a Blob: ArrayBuffers are reliable in every browser's IndexedDB. */
-interface StoredImage {
-  bytes: ArrayBuffer
-  type: string
-}
-
 interface CachedCover {
   fileId: string
-  full: StoredImage
-  thumb?: StoredImage
+  full: StoredBlob
+  thumb?: StoredBlob
   timestamp: number
 }
-
-const toStored = async (blob: Blob): Promise<StoredImage> => ({ bytes: await blob.arrayBuffer(), type: blob.type })
-const toBlob = ({ bytes, type }: StoredImage): Blob => new Blob([bytes], { type })
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -78,7 +71,7 @@ export async function getCoverFromCache(fileId: string, variant: CoverVariant = 
   try {
     const entry = await withStore<CachedCover | undefined>('readonly', (store) => store.get(fileId))
     const image = variant === 'thumb' ? entry?.thumb : entry?.full
-    return image ? toBlob(image) : null
+    return image ? fromStored(image) : null
   } catch {
     return null
   }

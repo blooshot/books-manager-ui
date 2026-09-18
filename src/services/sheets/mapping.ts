@@ -177,6 +177,13 @@ export function buildRow<F extends string>(
   return row
 }
 
+/**
+ * A leading apostrophe stores the value as plain text. `Added at` needs this: written as-is, Sheets parses an ISO
+ * datetime into a date value and reads it back in the cell's display format, so it would never equal what was
+ * written. The outbox uses `Added at` as the key that stops a retried add from appending the same book twice.
+ */
+const forceText = (s: string): Cell => `'${s}`
+
 const num = (n: number | undefined): Cell => (n === undefined || !Number.isFinite(n) ? '' : n)
 const str = (s: string | undefined): Cell => (s === undefined ? '' : escapeText(s))
 
@@ -189,7 +196,7 @@ export function bookCells(book: Book): Record<BookField, Cell> {
     pricePaid: num(book.pricePaid),
     marketPrice: num(book.marketPrice),
     photoUrl: str(book.photoUrl),
-    addedAt: book.addedAt ?? '',
+    addedAt: book.addedAt ? forceText(book.addedAt) : '',
   }
 }
 

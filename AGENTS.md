@@ -113,9 +113,11 @@ A book that is already out cannot be borrowed again.
 2. **Write-through, optimistic.** Every add/edit/borrow/return updates the
    store immediately and fires the Sheets call right away; on failure the
    change rolls back with an error toast.
-3. **Outbox.** A write that fails because of an expired token or no network
-   stays in a persisted outbox (IndexedDB), shown as "N pending". The
-   **Sync** button flushes the outbox, then reloads from the Sheet.
+3. **Outbox.** A write that fails because the token expired or the network is
+   down (nothing else) is kept in a persisted outbox (IndexedDB) with its
+   optimistic change still on screen, shown as "N pending". It is sent in
+   order, safely repeatable, on sign-in, after a reconnect, and by the **Sync**
+   button, which then reloads from the Sheet. Details: ADR-0006.
 4. **Refresh** on startup, via a manual refresh button, and after a
    reconnect. Not on a timer.
 5. **Expiry.** Tokens last ~1 hour. On expiry (or a 401) show a
@@ -151,6 +153,7 @@ A book that is already out cannot be borrowed again.
    bottom Sheet on phone
 6. Search / filter by title, author, or status (client-side)
 7. Lent out — grouped by borrower (Accordion): who holds which books, since when
+8. Pending changes — what is waiting to be sent (retry / discard failed ones)
 
 The app must work equally well on phone and desktop.
 

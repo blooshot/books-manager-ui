@@ -9,6 +9,10 @@ const badgeVariants = cva('inline-flex items-center rounded-full px-2.5 py-0.5 t
       success: 'bg-success text-success-foreground',
       /** Neutral: the Borrowed pill (deliberately not the attention color). */
       neutral: 'bg-secondary text-secondary-foreground',
+      /** Attention: changes waiting to be sent ("N pending"). Reserved for things that need a look, never for errors. */
+      attention: 'bg-attention text-attention-foreground',
+      /** Errors only: a queued change that could not be applied. */
+      danger: 'bg-destructive text-destructive-foreground',
     },
   },
   defaultVariants: { variant: 'neutral' },

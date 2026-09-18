@@ -4,26 +4,34 @@ import booksReducer from '@/store/booksSlice'
 import borrowersReducer from '@/store/borrowersSlice'
 import libraryReducer from '@/store/librarySlice'
 import noticesReducer from '@/store/noticesSlice'
-import type { ThunkExtra } from '@/store/libraryThunks'
+import { createIndexedDbOutbox } from '@/services/outbox/indexedDbOutbox'
+import type { OutboxStorage } from '@/services/outbox/types'
+import outboxReducer from '@/store/outboxSlice'
+import type { ThunkExtra } from '@/store/thunkExtra'
 import sessionReducer from '@/store/sessionSlice'
 
-const defaultExtra: ThunkExtra = {
+export type StoreOptions = Omit<ThunkExtra, 'outbox'> & { outbox?: OutboxStorage }
+
+const defaultOptions: StoreOptions = {
   sheetId: config.sheetId,
   now: () => new Date(),
 }
 
-/** `extra` is injectable so tests can point the thunks at a fake Sheet. */
-export const makeStore = (extra: ThunkExtra = defaultExtra) =>
-  configureStore({
+/** Options are injectable so tests can point the thunks at a fake Sheet, clock, and outbox. */
+export const makeStore = (options: StoreOptions = defaultOptions) => {
+  const extra: ThunkExtra = { ...options, outbox: options.outbox ?? createIndexedDbOutbox() }
+  return configureStore({
     reducer: {
       session: sessionReducer,
       library: libraryReducer,
       notices: noticesReducer,
+      outbox: outboxReducer,
       books: booksReducer,
       borrowers: borrowersReducer,
     },
     middleware: (getDefaultMiddleware) => getDefaultMiddleware({ thunk: { extraArgument: extra } }),
   })
+}
 
 export const store = makeStore()
 
