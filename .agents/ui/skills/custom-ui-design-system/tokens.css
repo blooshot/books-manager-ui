@@ -1,0 +1,148 @@
+/* ============================================================
+   FUSION DESIGN SYSTEM — TOKENS
+   Dual-personality theme: navy/emerald/olive in light mode,
+   teal/pine in dark mode. Drop this file into any project and
+   set data-theme="light" | "dark" on <html> or <body>.
+   ============================================================ */
+
+:root {
+  /* ---------- Typography ---------- */
+  --font-display: 'Manrope', sans-serif;
+  --font-body: 'Manrope', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 21px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
+  --text-display: 44px;
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.6;
+
+  /* ---------- Spacing scale ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ---------- Radius ---------- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 999px;
+  --border-w: 1px;
+
+  /* ---------- Motion (shadcn-style interaction states) ---------- */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-base: 150ms;
+  --duration-slow: 220ms;
+  --hover-opacity: 0.88;
+  --active-opacity: 0.78;
+  --active-scale: 0.97;
+}
+
+/* Respect users who ask for less motion (extension to Fusion) */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+    --active-scale: 1;
+  }
+}
+
+/* ============================================================
+   COLOR TOKENS — LIGHT (default)
+   Deep, muted trio instead of bright primaries: navy / emerald / olive.
+   ============================================================ */
+:root,
+[data-theme="light"] {
+  --bg: #F5F6F1;
+  --surface: #FFFFFF;
+  --surface-2: #EAEBE2;
+  --text: #1B2430;
+  --text-muted: #5C6570;
+  --border: #DADCD1;
+
+  --accent: #1F3A5F;        /* navy — primary actions, links, focus ring */
+  --accent-text: #FFFFFF;
+  --secondary: #1B6B4A;     /* emerald — success, positive deltas */
+  --secondary-text: #FFFFFF;
+  --tertiary: #6E7233;      /* olive — caution, attention-needed states */
+  --tertiary-text: #FFFFFF;
+  --danger: #B3261E;        /* red — errors only (extension to Fusion) */
+  --danger-text: #FFFFFF;
+
+  --shadow-sm: 0 1px 2px rgba(20, 33, 46, .06);
+  --shadow-md: 0 6px 16px -8px rgba(20, 33, 46, .12);
+  --shadow-lg: 0 20px 50px -12px rgba(20, 33, 46, .22);
+}
+
+/* ============================================================
+   COLOR TOKENS — DARK
+   Calmer duo: teal / pine, with a softer red reserved for real alerts.
+   ============================================================ */
+[data-theme="dark"] {
+  --bg: #0B1614;
+  --surface: #12201D;
+  --surface-2: #182C27;
+  --text: #E7F3EE;
+  --text-muted: #8FA89D;
+  --border: #24413A;
+
+  --accent: #2FBFA6;        /* teal — primary actions, links, focus ring */
+  --accent-text: #062420;
+  --secondary: #4C9A7C;     /* pine — success, positive deltas */
+  --secondary-text: #0E1F17;
+  --tertiary: #E2685C;      /* soft red — reserved for real alerts */
+  --tertiary-text: #2A0B08;
+  --danger: #E2685C;        /* same soft red as tertiary — errors only (extension to Fusion) */
+  --danger-text: #2A0B08;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
+  --shadow-md: 0 6px 16px -8px rgba(0, 0, 0, .45);
+  --shadow-lg: 0 20px 50px -12px rgba(0, 0, 0, .55);
+}
+
+/* ============================================================
+   OPTIONAL — shadcn/ui variable mapping
+   If your project already uses shadcn/ui's default variable names,
+   bridge them to Fusion's tokens like this in your globals.css
+   (after importing this file):
+
+   --background: var(--bg);
+   --foreground: var(--text);
+   --card: var(--surface);
+   --card-foreground: var(--text);
+   --popover: var(--surface);
+   --popover-foreground: var(--text);
+   --primary: var(--accent);
+   --primary-foreground: var(--accent-text);
+   --secondary: var(--surface-2);
+   --secondary-foreground: var(--text);
+   --muted: var(--surface-2);
+   --muted-foreground: var(--text-muted);
+   --accent: var(--surface-2);          // shadcn's "accent" = subtle hover bg, not brand accent
+   --accent-foreground: var(--text);
+   --destructive: var(--danger);        // was var(--tertiary); light-mode tertiary is olive, too mild for errors
+   --destructive-foreground: var(--danger-text);
+   --success: var(--secondary);         // custom addition, not in shadcn's default set
+   --success-foreground: var(--secondary-text);
+   --border: var(--border);
+   --input: var(--border);
+   --ring: var(--accent);
+   --radius: var(--radius-md);
+   ============================================================ */
