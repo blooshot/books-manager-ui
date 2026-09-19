@@ -214,6 +214,7 @@ no `any`, default exports only for App/main/slices.
 
 ## Gotchas (learned the hard way; more in `conductor/lessons-learned.md`)
 
+- **Git identity and pushing (the owner has several GitHub accounts).** This repo pushes to `blooshot/books-manager-ui` as GitHub user `blooshot`, using the SSH host alias `fnff` from the owner's `~/.ssh/config` (`origin` is `git@fnff:blooshot/books-manager-ui.git`). The plain `git@github.com` URL authenticates as a different account (`krprod`) and is refused. Commit author is set **per repo** in `.git/config` (`user.name` = `bloodshot`, `user.email` = `krishna.fnff@gmail.com`), which is not committed: a fresh clone must set it again (`git config user.name ...; git config user.email ...`). Check with `git config --show-origin --get user.email`. If a push says "permission denied", run `ssh -T git@fnff` (should say `Hi blooshot!`); adding `IdentitiesOnly yes` under `Host fnff` fixes a wrong-key pick.
 - **Redux serializes thunk errors** to `{name, message, stack, code}` — `instanceof` and `status` are lost. Branch on `error.name`
   (`SessionExpiredError`, `SheetsPermissionError`, `DrivePermissionError`, `ValidationError`, `AlreadyBorrowedError`, `NotBorrowedError`,
   `BookNotFoundError`, `SheetSchemaError`) and `error.code` (`'401'`, `'403'`, `'404'`, `'500'`, `'NETWORK'`). Outbox-retryable: `SessionExpiredError` and `NETWORK`.
